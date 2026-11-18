@@ -1,0 +1,27 @@
+{
+  "scene_id": "scene_004",
+  "index": 4,
+  "type": "A",
+  "type_name": "dual_corridor",
+  "seed": 20250105,
+  "attempt": 0,
+  "size": 64,
+  "start": [
+    21,
+    6
+  ],
+  "goal": [
+    21,
+    56
+  ],
+  "stats": {
+    "free_fraction": 0.1799,
+    "components": 1,
+    "cycles": 549,
+    "pocket_cells_detour10": 455,
+    "max_detour": 52.0,
+    "max_detour_ratio": 1.812,
+    "geodesic_sg": 64,
+    "peel_depth_max": 8
+  }
+}

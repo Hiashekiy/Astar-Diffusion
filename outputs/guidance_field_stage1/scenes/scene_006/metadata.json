@@ -1,0 +1,27 @@
+{
+  "scene_id": "scene_006",
+  "index": 6,
+  "type": "B",
+  "type_name": "detour_block",
+  "seed": 20251102,
+  "attempt": 0,
+  "size": 64,
+  "start": [
+    28,
+    4
+  ],
+  "goal": [
+    28,
+    60
+  ],
+  "stats": {
+    "free_fraction": 0.1245,
+    "components": 1,
+    "cycles": 254,
+    "pocket_cells_detour10": 123,
+    "max_detour": 44.0,
+    "max_detour_ratio": 1.468,
+    "geodesic_sg": 94,
+    "peel_depth_max": 8
+  }
+}

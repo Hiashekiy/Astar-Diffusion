@@ -1,0 +1,27 @@
+{
+  "scene_id": "scene_010",
+  "index": 10,
+  "type": "C",
+  "type_name": "dead_end_branches",
+  "seed": 20252101,
+  "attempt": 9,
+  "size": 64,
+  "start": [
+    35,
+    2
+  ],
+  "goal": [
+    48,
+    61
+  ],
+  "stats": {
+    "free_fraction": 0.083,
+    "components": 1,
+    "cycles": 176,
+    "pocket_cells_detour10": 53,
+    "max_detour": 32.0,
+    "max_detour_ratio": 1.372,
+    "geodesic_sg": 86,
+    "peel_depth_max": 15
+  }
+}

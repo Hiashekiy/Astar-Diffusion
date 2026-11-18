@@ -1,0 +1,46 @@
+{
+  "excellent": {
+    "label": "astar_aug_0.2_4",
+    "kind": "noisy_astar",
+    "ratio": 1.0303,
+    "length": 68,
+    "in_grade": true,
+    "backtracks": 0,
+    "backtrack_fraction": 0.0,
+    "num_waypoints": 0,
+    "unique_sources": 32
+  },
+  "good": {
+    "label": "waypoint_19",
+    "kind": "waypoint",
+    "ratio": 1.0909,
+    "length": 72,
+    "in_grade": true,
+    "backtracks": 0,
+    "backtrack_fraction": 0.0,
+    "num_waypoints": 1,
+    "unique_sources": 32
+  },
+  "medium": {
+    "label": "waypoint_01",
+    "kind": "waypoint",
+    "ratio": 1.2121,
+    "length": 80,
+    "in_grade": true,
+    "backtracks": 0,
+    "backtrack_fraction": 0.0,
+    "num_waypoints": 1,
+    "unique_sources": 32
+  },
+  "poor": {
+    "label": "waypoint_07",
+    "kind": "waypoint",
+    "ratio": 1.4545,
+    "length": 96,
+    "in_grade": true,
+    "backtracks": 1,
+    "backtrack_fraction": 0.0103,
+    "num_waypoints": 1,
+    "unique_sources": 32
+  }
+}

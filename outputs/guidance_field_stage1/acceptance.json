@@ -1,0 +1,337 @@
+{
+  "passed": true,
+  "n_checks_passed": 7,
+  "n_checks": 7,
+  "config": {
+    "outdir": "outputs/guidance_field_stage1",
+    "grid_size": 64,
+    "instances_per_type": 5,
+    "num_samples": 32,
+    "lam": 0.02,
+    "seed": 20250101,
+    "min_geodesic_sg": 45,
+    "waypoint_candidates": 48,
+    "ball_radius": 3
+  },
+  "checks": {
+    "1_field_stable": {
+      "pass": true,
+      "fields_checked": 240,
+      "all_free_cells_finite": true,
+      "value_range_respected": true,
+      "max_lipschitz_excess": 1e-07,
+      "tolerance": 0.0001,
+      "note": "F must be finite on every free cell, within the source-strength bounds, and 1-lambda-Lipschitz in geodesic steps"
+    },
+    "2_obstacles_block": {
+      "pass": true,
+      "field_A_vs_closed_form_max_err": 5.722e-08,
+      "field_B_vs_max_formula_max_err": 5.891e-08,
+      "corr_fieldA_vs_geodesic_distance": -1.0,
+      "corr_fieldA_vs_euclidean_distance": -0.930173,
+      "note": "Field-A must equal 1 - lambda*d_free(x, path) exactly, and Field-B must equal max_i[w_i - lambda*d_free(x, s_i)] exactly; the much weaker correlation with straight-line distance shows walls are respected"
+    },
+    "3_strength_monotone": {
+      "pass": true,
+      "linear_weights": [
+        0.0,
+        0.0323,
+        0.0645,
+        0.0968,
+        "...",
+        0.9677,
+        1.0
+      ],
+      "quadratic_weights_same_check": true,
+      "samples_start_at_S_and_end_at_G": true,
+      "note": "w_i strictly increasing for Field-B/C, w_0 = 0, w_31 = 1"
+    },
+    "4_continuous_band": {
+      "pass": true,
+      "max_dip_by_kind": {
+        "uniform": 0.12,
+        "linear": 0.1192,
+        "quadratic": 0.1195
+      },
+      "max_dip_in_source_intervals": {
+        "uniform": 0.853,
+        "linear": 0.81,
+        "quadratic": 0.846
+      },
+      "tolerance_in_source_intervals": 1.5,
+      "note": "dip normalised by lam*L/M (one inter-sample decay step); a broken band would exceed one full interval"
+    },
+    "5_quality_shapes_field": {
+      "pass": true,
+      "maps_evaluated": 20,
+      "corr_path_divergence_vs_field_divergence": 0.886,
+      "maps_with_distinct_routes": 14,
+      "min_field_divergence_distinct_routes": 0.1607,
+      "max_field_divergence_shared_corridor": 0.148,
+      "note": "field divergence must grow with trajectory divergence: >= 0.10 where the two trajectories take different routes, and small where they share the same corridor (the field encodes the input path, it does not silently repair it)",
+      "per_map": [
+        {
+          "scene_id": "scene_000",
+          "type": "A",
+          "path_divergence_cells": 18.53,
+          "field_divergence_linear": 0.1738,
+          "field_divergence_uniform": 0.2423,
+          "ratio_field_per_path": 0.0094
+        },
+        {
+          "scene_id": "scene_001",
+          "type": "A",
+          "path_divergence_cells": 20.28,
+          "field_divergence_linear": 0.2228,
+          "field_divergence_uniform": 0.2747,
+          "ratio_field_per_path": 0.011
+        },
+        {
+          "scene_id": "scene_002",
+          "type": "A",
+          "path_divergence_cells": 17.77,
+          "field_divergence_linear": 0.164,
+          "field_divergence_uniform": 0.2314,
+          "ratio_field_per_path": 0.0092
+        },
+        {
+          "scene_id": "scene_003",
+          "type": "A",
+          "path_divergence_cells": 18.77,
+          "field_divergence_linear": 0.1755,
+          "field_divergence_uniform": 0.224,
+          "ratio_field_per_path": 0.0094
+        },
+        {
+          "scene_id": "scene_004",
+          "type": "A",
+          "path_divergence_cells": 18.47,
+          "field_divergence_linear": 0.1607,
+          "field_divergence_uniform": 0.2333,
+          "ratio_field_per_path": 0.0087
+        },
+        {
+          "scene_id": "scene_005",
+          "type": "B",
+          "path_divergence_cells": 31.0,
+          "field_divergence_linear": 0.412,
+          "field_divergence_uniform": 0.5147,
+          "ratio_field_per_path": 0.0133
+        },
+        {
+          "scene_id": "scene_006",
+          "type": "B",
+          "path_divergence_cells": 28.73,
+          "field_divergence_linear": 0.3134,
+          "field_divergence_uniform": 0.3987,
+          "ratio_field_per_path": 0.0109
+        },
+        {
+          "scene_id": "scene_007",
+          "type": "B",
+          "path_divergence_cells": 3.84,
+          "field_divergence_linear": 0.0571,
+          "field_divergence_uniform": 0.0482,
+          "ratio_field_per_path": 0.0148
+        },
+        {
+          "scene_id": "scene_008",
+          "type": "B",
+          "path_divergence_cells": 29.47,
+          "field_divergence_linear": 0.39,
+          "field_divergence_uniform": 0.4935,
+          "ratio_field_per_path": 0.0132
+        },
+        {
+          "scene_id": "scene_009",
+          "type": "B",
+          "path_divergence_cells": 28.62,
+          "field_divergence_linear": 0.319,
+          "field_divergence_uniform": 0.3955,
+          "ratio_field_per_path": 0.0111
+        },
+        {
+          "scene_id": "scene_010",
+          "type": "C",
+          "path_divergence_cells": 2.08,
+          "field_divergence_linear": 0.0703,
+          "field_divergence_uniform": 0.023,
+          "ratio_field_per_path": 0.0338
+        },
+        {
+          "scene_id": "scene_011",
+          "type": "C",
+          "path_divergence_cells": 2.05,
+          "field_divergence_linear": 0.0707,
+          "field_divergence_uniform": 0.0249,
+          "ratio_field_per_path": 0.0345
+        },
+        {
+          "scene_id": "scene_012",
+          "type": "C",
+          "path_divergence_cells": 1.58,
+          "field_divergence_linear": 0.0849,
+          "field_divergence_uniform": 0.0234,
+          "ratio_field_per_path": 0.0538
+        },
+        {
+          "scene_id": "scene_013",
+          "type": "C",
+          "path_divergence_cells": 1.25,
+          "field_divergence_linear": 0.1357,
+          "field_divergence_uniform": 0.0184,
+          "ratio_field_per_path": 0.1086
+        },
+        {
+          "scene_id": "scene_014",
+          "type": "C",
+          "path_divergence_cells": 2.33,
+          "field_divergence_linear": 0.148,
+          "field_divergence_uniform": 0.0324,
+          "ratio_field_per_path": 0.0636
+        },
+        {
+          "scene_id": "scene_015",
+          "type": "D",
+          "path_divergence_cells": 13.61,
+          "field_divergence_linear": 0.2529,
+          "field_divergence_uniform": 0.2559,
+          "ratio_field_per_path": 0.0186
+        },
+        {
+          "scene_id": "scene_016",
+          "type": "D",
+          "path_divergence_cells": 28.69,
+          "field_divergence_linear": 0.4723,
+          "field_divergence_uniform": 0.487,
+          "ratio_field_per_path": 0.0165
+        },
+        {
+          "scene_id": "scene_017",
+          "type": "D",
+          "path_divergence_cells": 26.45,
+          "field_divergence_linear": 0.4456,
+          "field_divergence_uniform": 0.5409,
+          "ratio_field_per_path": 0.0168
+        },
+        {
+          "scene_id": "scene_018",
+          "type": "D",
+          "path_divergence_cells": 14.09,
+          "field_divergence_linear": 0.2077,
+          "field_divergence_uniform": 0.2788,
+          "ratio_field_per_path": 0.0147
+        },
+        {
+          "scene_id": "scene_019",
+          "type": "D",
+          "path_divergence_cells": 29.94,
+          "field_divergence_linear": 0.4194,
+          "field_divergence_uniform": 0.5313,
+          "ratio_field_per_path": 0.014
+        }
+      ]
+    },
+    "6_channel_contrast": {
+      "pass": true,
+      "maps_evaluated": 10,
+      "min_auc_separation": 1.0,
+      "median_auc_separation": 1.0,
+      "min_median_pocket_suppression": 0.18,
+      "median_median_pocket_suppression": 0.37,
+      "note": "in multi-branch maps the trajectory's channel must outrank off-route pockets (AUC) and every pocket must sit measurably below the ramp value that governs it",
+      "per_map": [
+        {
+          "scene_id": "scene_010",
+          "type": "C",
+          "pocket_cells": 53,
+          "pocket_mean_depth_cells": 9.38,
+          "auc_corridor_outranks_pocket_uniform": 1.0,
+          "median_pocket_suppression_linear": 0.18
+        },
+        {
+          "scene_id": "scene_011",
+          "type": "C",
+          "pocket_cells": 35,
+          "pocket_mean_depth_cells": 10.34,
+          "auc_corridor_outranks_pocket_uniform": 1.0,
+          "median_pocket_suppression_linear": 0.22
+        },
+        {
+          "scene_id": "scene_012",
+          "type": "C",
+          "pocket_cells": 44,
+          "pocket_mean_depth_cells": 9.91,
+          "auc_corridor_outranks_pocket_uniform": 1.0,
+          "median_pocket_suppression_linear": 0.2
+        },
+        {
+          "scene_id": "scene_013",
+          "type": "C",
+          "pocket_cells": 47,
+          "pocket_mean_depth_cells": 9.87,
+          "auc_corridor_outranks_pocket_uniform": 1.0,
+          "median_pocket_suppression_linear": 0.2
+        },
+        {
+          "scene_id": "scene_014",
+          "type": "C",
+          "pocket_cells": 40,
+          "pocket_mean_depth_cells": 8.55,
+          "auc_corridor_outranks_pocket_uniform": 1.0,
+          "median_pocket_suppression_linear": 0.18
+        },
+        {
+          "scene_id": "scene_015",
+          "type": "D",
+          "pocket_cells": 1433,
+          "pocket_mean_depth_cells": 29.02,
+          "auc_corridor_outranks_pocket_uniform": 1.0,
+          "median_pocket_suppression_linear": 0.52
+        },
+        {
+          "scene_id": "scene_016",
+          "type": "D",
+          "pocket_cells": 1342,
+          "pocket_mean_depth_cells": 33.44,
+          "auc_corridor_outranks_pocket_uniform": 1.0,
+          "median_pocket_suppression_linear": 0.58
+        },
+        {
+          "scene_id": "scene_017",
+          "type": "D",
+          "pocket_cells": 1324,
+          "pocket_mean_depth_cells": 41.76,
+          "auc_corridor_outranks_pocket_uniform": 1.0,
+          "median_pocket_suppression_linear": 0.93
+        },
+        {
+          "scene_id": "scene_018",
+          "type": "D",
+          "pocket_cells": 1684,
+          "pocket_mean_depth_cells": 44.44,
+          "auc_corridor_outranks_pocket_uniform": 1.0,
+          "median_pocket_suppression_linear": 0.92
+        },
+        {
+          "scene_id": "scene_019",
+          "type": "D",
+          "pocket_cells": 1527,
+          "pocket_mean_depth_cells": 33.51,
+          "auc_corridor_outranks_pocket_uniform": 1.0,
+          "median_pocket_suppression_linear": 0.62
+        }
+      ]
+    },
+    "7_weighting_directionality": {
+      "pass": true,
+      "delta_F_uniform_abs_max": 0.0098,
+      "delta_F_uniform_mean": -0.0012,
+      "delta_F_linear_min": 0.7807,
+      "delta_F_linear_mean": 0.9758,
+      "delta_F_quadratic_min": 0.9653,
+      "delta_F_quadratic_mean": 0.9955,
+      "note": "uniform field is flat (delta_F ~ 0); goal weighting must lift delta_F towards 1"
+    }
+  }
+}

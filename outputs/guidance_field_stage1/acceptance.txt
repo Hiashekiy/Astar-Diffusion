@@ -1,0 +1,41 @@
+Stage-1 acceptance
+==============================================================================
+[PASS] 1_field_stable
+        fields_checked: 240
+        all_free_cells_finite: True
+        value_range_respected: True
+        max_lipschitz_excess: 1e-07
+        tolerance: 0.0001
+[PASS] 2_obstacles_block
+        field_A_vs_closed_form_max_err: 5.722e-08
+        field_B_vs_max_formula_max_err: 5.891e-08
+        corr_fieldA_vs_geodesic_distance: -1.0
+        corr_fieldA_vs_euclidean_distance: -0.930173
+[PASS] 3_strength_monotone
+        quadratic_weights_same_check: True
+        samples_start_at_S_and_end_at_G: True
+[PASS] 4_continuous_band
+        max_dip_by_kind: {'uniform': 0.12, 'linear': 0.1192, 'quadratic': 0.1195}
+        max_dip_in_source_intervals: {'uniform': 0.853, 'linear': 0.81, 'quadratic': 0.846}
+        tolerance_in_source_intervals: 1.5
+[PASS] 5_quality_shapes_field
+        maps_evaluated: 20
+        corr_path_divergence_vs_field_divergence: 0.886
+        maps_with_distinct_routes: 14
+        min_field_divergence_distinct_routes: 0.1607
+        max_field_divergence_shared_corridor: 0.148
+[PASS] 6_channel_contrast
+        maps_evaluated: 10
+        min_auc_separation: 1.0
+        median_auc_separation: 1.0
+        min_median_pocket_suppression: 0.18
+        median_median_pocket_suppression: 0.37
+[PASS] 7_weighting_directionality
+        delta_F_uniform_abs_max: 0.0098
+        delta_F_uniform_mean: -0.0012
+        delta_F_linear_min: 0.7807
+        delta_F_linear_mean: 0.9758
+        delta_F_quadratic_min: 0.9653
+        delta_F_quadratic_mean: 0.9955
+------------------------------------------------------------------------------
+7/7 checks passed -> ACCEPT stage 1

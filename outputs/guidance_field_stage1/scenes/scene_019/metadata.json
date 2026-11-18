@@ -1,0 +1,27 @@
+{
+  "scene_id": "scene_019",
+  "index": 19,
+  "type": "D",
+  "type_name": "multi_branch_maze",
+  "seed": 20253105,
+  "attempt": 0,
+  "size": 64,
+  "start": [
+    4,
+    59
+  ],
+  "goal": [
+    59,
+    2
+  ],
+  "stats": {
+    "free_fraction": 0.5044,
+    "components": 1,
+    "cycles": 163,
+    "pocket_cells_detour10": 1527,
+    "max_detour": 100.0,
+    "max_detour_ratio": 1.746,
+    "geodesic_sg": 134,
+    "peel_depth_max": 28
+  }
+}
