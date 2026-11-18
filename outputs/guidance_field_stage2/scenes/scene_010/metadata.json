@@ -1,0 +1,35 @@
+{
+  "scene_id": "scene_010",
+  "index": 10,
+  "type": "C",
+  "type_name": "multi_branch_maze",
+  "seed": 20262214,
+  "attempt": 0,
+  "size": 64,
+  "start": [
+    5,
+    59
+  ],
+  "goal": [
+    53,
+    13
+  ],
+  "stats": {
+    "components": 1,
+    "free_fraction": 0.4648,
+    "obstacle_cells": 2192,
+    "geodesic_sg": 122,
+    "euclid_sg": 66.48,
+    "open_cell_ratio": 0.1618,
+    "cycles": 132,
+    "dead_end_cells": 299
+  },
+  "structure": {
+    "loops": 362,
+    "widened_cells": 12,
+    "rooms": 6,
+    "dead_end_pockets": 4,
+    "lattice_cells": 961,
+    "isolated_free_cells_removed": 76
+  }
+}

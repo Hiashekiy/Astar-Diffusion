@@ -1,0 +1,211 @@
+{
+  "M0": {
+    "metadata": {
+      "num_raw_samples": 64,
+      "num_invalid_sources": 0,
+      "mean_projection_distance": null,
+      "max_projection_distance": null,
+      "num_collision_intervals": 9,
+      "num_bridged_intervals": null,
+      "bridge_success_rate": null,
+      "bridge_total_length": null,
+      "bridge_detour_ratio": null,
+      "roi_expansion_count": null,
+      "failures": [],
+      "method": "M0",
+      "num_valid_sources": 57,
+      "valid_source_ratio": 0.890625,
+      "num_duplicate_source_cells": 0
+    },
+    "support_length": null
+  },
+  "M1": {
+    "metadata": {
+      "num_raw_samples": 64,
+      "num_invalid_sources": 0,
+      "mean_projection_distance": 0.109375,
+      "max_projection_distance": 1.0,
+      "num_projected_sources": 7,
+      "num_collision_intervals": 9,
+      "num_bridged_intervals": null,
+      "bridge_success_rate": null,
+      "bridge_total_length": null,
+      "bridge_detour_ratio": null,
+      "roi_expansion_count": null,
+      "failures": [],
+      "method": "M1",
+      "num_valid_sources": 64,
+      "valid_source_ratio": 1.0,
+      "num_duplicate_source_cells": 0
+    },
+    "support_length": null
+  },
+  "M2": {
+    "metadata": {
+      "num_raw_samples": 64,
+      "num_invalid_sources": 0,
+      "mean_projection_distance": null,
+      "max_projection_distance": null,
+      "num_collision_intervals": 9,
+      "num_bridged_intervals": 9,
+      "bridge_success_rate": 1.0,
+      "bridge_total_length": 86.0,
+      "bridge_detour_ratio": 4.155,
+      "roi_expansion_count": 2,
+      "failures": [],
+      "bridges": [
+        {
+          "interval": 0,
+          "u_in": 0.344,
+          "u_out": 0.3563,
+          "roi": [
+            33,
+            43,
+            28,
+            37
+          ],
+          "margin": 4,
+          "roi_attempt": 0,
+          "length": 7.0,
+          "straight_distance": 2.236,
+          "detour_ratio": 3.13
+        },
+        {
+          "interval": 1,
+          "u_in": 0.3686,
+          "u_out": 0.3808,
+          "roi": [
+            27,
+            45,
+            26,
+            43
+          ],
+          "margin": 8,
+          "roi_attempt": 1,
+          "length": 13.0,
+          "straight_distance": 2.236,
+          "detour_ratio": 5.814
+        },
+        {
+          "interval": 2,
+          "u_in": 0.3931,
+          "u_out": 0.3995,
+          "roi": [
+            30,
+            39,
+            32,
+            41
+          ],
+          "margin": 4,
+          "roi_attempt": 0,
+          "length": 2.0,
+          "straight_distance": 1.414,
+          "detour_ratio": 1.414
+        },
+        {
+          "interval": 3,
+          "u_in": 0.4176,
+          "u_out": 0.4269,
+          "roi": [
+            28,
+            37,
+            34,
+            43
+          ],
+          "margin": 4,
+          "roi_attempt": 0,
+          "length": 2.0,
+          "straight_distance": 1.414,
+          "detour_ratio": 1.414
+        },
+        {
+          "interval": 4,
+          "u_in": 0.4406,
+          "u_out": 0.4543,
+          "roi": [
+            25,
+            35,
+            35,
+            45
+          ],
+          "margin": 4,
+          "roi_attempt": 0,
+          "length": 20.0,
+          "straight_distance": 2.828,
+          "detour_ratio": 7.071
+        },
+        {
+          "interval": 5,
+          "u_in": 0.4666,
+          "u_out": 0.4817,
+          "roi": [
+            23,
+            33,
+            37,
+            47
+          ],
+          "margin": 4,
+          "roi_attempt": 0,
+          "length": 8.0,
+          "straight_distance": 2.828,
+          "detour_ratio": 2.828
+        },
+        {
+          "interval": 6,
+          "u_in": 0.4911,
+          "u_out": 0.5034,
+          "roi": [
+            17,
+            35,
+            35,
+            52
+          ],
+          "margin": 8,
+          "roi_attempt": 1,
+          "length": 25.0,
+          "straight_distance": 2.236,
+          "detour_ratio": 11.18
+        },
+        {
+          "interval": 7,
+          "u_in": 0.5228,
+          "u_out": 0.5279,
+          "roi": [
+            19,
+            28,
+            41,
+            50
+          ],
+          "margin": 4,
+          "roi_attempt": 0,
+          "length": 2.0,
+          "straight_distance": 1.414,
+          "detour_ratio": 1.414
+        },
+        {
+          "interval": 8,
+          "u_in": 0.5502,
+          "u_out": 0.5639,
+          "roi": [
+            17,
+            26,
+            43,
+            53
+          ],
+          "margin": 4,
+          "roi_attempt": 0,
+          "length": 7.0,
+          "straight_distance": 2.236,
+          "detour_ratio": 3.13
+        }
+      ],
+      "support_length": 191.175,
+      "raw_length": 109.495,
+      "method": "M2",
+      "num_valid_sources": 64,
+      "valid_source_ratio": 1.0,
+      "num_duplicate_source_cells": 5
+    },
+    "support_length": 191.175
+  }
+}

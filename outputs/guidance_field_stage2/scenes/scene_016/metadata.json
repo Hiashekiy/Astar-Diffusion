@@ -1,0 +1,63 @@
+{
+  "scene_id": "scene_016",
+  "index": 16,
+  "type": "D",
+  "type_name": "structured_topology",
+  "seed": 20263215,
+  "attempt": 0,
+  "size": 64,
+  "start": [
+    55,
+    4
+  ],
+  "goal": [
+    54,
+    62
+  ],
+  "stats": {
+    "components": 1,
+    "free_fraction": 0.7751,
+    "obstacle_cells": 921,
+    "geodesic_sg": 157,
+    "euclid_sg": 58.01,
+    "open_cell_ratio": 0.9827,
+    "cycles": 2833,
+    "dead_end_cells": 15
+  },
+  "structure": {
+    "structure_counts": {
+      "U": 0,
+      "C": 0,
+      "L": 3,
+      "comb": 2,
+      "gate": 2,
+      "cluster": 0,
+      "bottleneck": 2
+    },
+    "structure_kinds": [
+      "L",
+      "bottleneck",
+      "comb",
+      "gate"
+    ],
+    "gates": [
+      {
+        "center": [
+          31.4,
+          10.2
+        ],
+        "gap": 1.03,
+        "horizontal": false
+      },
+      {
+        "center": [
+          23.9,
+          24.6
+        ],
+        "gap": 1.85,
+        "horizontal": true
+      }
+    ],
+    "isolated_free_cells_removed": 0
+  }
+}

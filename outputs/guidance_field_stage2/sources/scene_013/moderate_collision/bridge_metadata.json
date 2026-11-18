@@ -1,0 +1,195 @@
+{
+  "M0": {
+    "metadata": {
+      "num_raw_samples": 64,
+      "num_invalid_sources": 0,
+      "mean_projection_distance": null,
+      "max_projection_distance": null,
+      "num_collision_intervals": 8,
+      "num_bridged_intervals": null,
+      "bridge_success_rate": null,
+      "bridge_total_length": null,
+      "bridge_detour_ratio": null,
+      "roi_expansion_count": null,
+      "failures": [],
+      "method": "M0",
+      "num_valid_sources": 61,
+      "valid_source_ratio": 0.953125,
+      "num_duplicate_source_cells": 0
+    },
+    "support_length": null
+  },
+  "M1": {
+    "metadata": {
+      "num_raw_samples": 64,
+      "num_invalid_sources": 0,
+      "mean_projection_distance": 0.046875,
+      "max_projection_distance": 1.0,
+      "num_projected_sources": 3,
+      "num_collision_intervals": 8,
+      "num_bridged_intervals": null,
+      "bridge_success_rate": null,
+      "bridge_total_length": null,
+      "bridge_detour_ratio": null,
+      "roi_expansion_count": null,
+      "failures": [],
+      "method": "M1",
+      "num_valid_sources": 64,
+      "valid_source_ratio": 1.0,
+      "num_duplicate_source_cells": 0
+    },
+    "support_length": null
+  },
+  "M2": {
+    "metadata": {
+      "num_raw_samples": 64,
+      "num_invalid_sources": 0,
+      "mean_projection_distance": null,
+      "max_projection_distance": null,
+      "num_collision_intervals": 8,
+      "num_bridged_intervals": 8,
+      "bridge_success_rate": 1.0,
+      "bridge_total_length": 87.0,
+      "bridge_detour_ratio": 4.214,
+      "roi_expansion_count": 2,
+      "failures": [],
+      "bridges": [
+        {
+          "interval": 0,
+          "u_in": 0.02,
+          "u_out": 0.028,
+          "roi": [
+            0,
+            8,
+            13,
+            23
+          ],
+          "margin": 4,
+          "roi_attempt": 0,
+          "length": 4.0,
+          "straight_distance": 2.0,
+          "detour_ratio": 2.0
+        },
+        {
+          "interval": 1,
+          "u_in": 0.036,
+          "u_out": 0.044,
+          "roi": [
+            0,
+            8,
+            15,
+            25
+          ],
+          "margin": 4,
+          "roi_attempt": 0,
+          "length": 4.0,
+          "straight_distance": 2.0,
+          "detour_ratio": 2.0
+        },
+        {
+          "interval": 2,
+          "u_in": 0.0519,
+          "u_out": 0.0599,
+          "roi": [
+            1,
+            9,
+            17,
+            27
+          ],
+          "margin": 4,
+          "roi_attempt": 0,
+          "length": 10.0,
+          "straight_distance": 2.0,
+          "detour_ratio": 5.0
+        },
+        {
+          "interval": 3,
+          "u_in": 0.0839,
+          "u_out": 0.1079,
+          "roi": [
+            0,
+            14,
+            17,
+            37
+          ],
+          "margin": 8,
+          "roi_attempt": 1,
+          "length": 34.0,
+          "straight_distance": 4.0,
+          "detour_ratio": 8.5
+        },
+        {
+          "interval": 4,
+          "u_in": 0.1159,
+          "u_out": 0.1239,
+          "roi": [
+            0,
+            15,
+            21,
+            39
+          ],
+          "margin": 8,
+          "roi_attempt": 1,
+          "length": 22.0,
+          "straight_distance": 2.0,
+          "detour_ratio": 11.0
+        },
+        {
+          "interval": 5,
+          "u_in": 0.1478,
+          "u_out": 0.1758,
+          "roi": [
+            4,
+            13,
+            29,
+            41
+          ],
+          "margin": 4,
+          "roi_attempt": 0,
+          "length": 5.0,
+          "straight_distance": 4.123,
+          "detour_ratio": 1.213
+        },
+        {
+          "interval": 6,
+          "u_in": 0.2118,
+          "u_out": 0.2198,
+          "roi": [
+            6,
+            14,
+            37,
+            47
+          ],
+          "margin": 4,
+          "roi_attempt": 0,
+          "length": 4.0,
+          "straight_distance": 2.0,
+          "detour_ratio": 2.0
+        },
+        {
+          "interval": 7,
+          "u_in": 0.2278,
+          "u_out": 0.2357,
+          "roi": [
+            6,
+            14,
+            39,
+            49
+          ],
+          "margin": 4,
+          "roi_attempt": 0,
+          "length": 4.0,
+          "straight_distance": 2.0,
+          "detour_ratio": 2.0
+        }
+      ],
+      "support_length": 208.44,
+      "raw_length": 128.985,
+      "method": "M2",
+      "num_valid_sources": 64,
+      "valid_source_ratio": 1.0,
+      "num_duplicate_source_cells": 2
+    },
+    "support_length": 208.44
+  }
+}

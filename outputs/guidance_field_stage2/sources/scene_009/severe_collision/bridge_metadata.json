@@ -1,0 +1,137 @@
+{
+  "M0": {
+    "metadata": {
+      "num_raw_samples": 64,
+      "num_invalid_sources": 0,
+      "mean_projection_distance": null,
+      "max_projection_distance": null,
+      "num_collision_intervals": 3,
+      "num_bridged_intervals": null,
+      "bridge_success_rate": null,
+      "bridge_total_length": null,
+      "bridge_detour_ratio": null,
+      "roi_expansion_count": null,
+      "failures": [],
+      "method": "M0",
+      "num_valid_sources": 49,
+      "valid_source_ratio": 0.765625,
+      "num_duplicate_source_cells": 2
+    },
+    "support_length": null
+  },
+  "M1": {
+    "metadata": {
+      "num_raw_samples": 64,
+      "num_invalid_sources": 3,
+      "mean_projection_distance": 0.33173881930327526,
+      "max_projection_distance": 3.0,
+      "num_projected_sources": 12,
+      "num_collision_intervals": 3,
+      "num_bridged_intervals": null,
+      "bridge_success_rate": null,
+      "bridge_total_length": null,
+      "bridge_detour_ratio": null,
+      "roi_expansion_count": null,
+      "failures": [
+        {
+          "cell": [
+            16,
+            47
+          ],
+          "reason": "no free cell within projection radius"
+        },
+        {
+          "cell": [
+            17,
+            47
+          ],
+          "reason": "no free cell within projection radius"
+        },
+        {
+          "cell": [
+            17,
+            47
+          ],
+          "reason": "no free cell within projection radius"
+        }
+      ],
+      "method": "M1",
+      "num_valid_sources": 61,
+      "valid_source_ratio": 0.953125,
+      "num_duplicate_source_cells": 6
+    },
+    "support_length": null
+  },
+  "M2": {
+    "metadata": {
+      "num_raw_samples": 64,
+      "num_invalid_sources": 0,
+      "mean_projection_distance": null,
+      "max_projection_distance": null,
+      "num_collision_intervals": 3,
+      "num_bridged_intervals": 3,
+      "bridge_success_rate": 1.0,
+      "bridge_total_length": 281.0,
+      "bridge_detour_ratio": 32.687,
+      "roi_expansion_count": 12,
+      "failures": [],
+      "bridges": [
+        {
+          "interval": 0,
+          "u_in": 0.1003,
+          "u_out": 0.2946,
+          "roi": [
+            0,
+            63,
+            0,
+            63
+          ],
+          "margin": "full_map",
+          "roi_attempt": 4,
+          "length": 101.0,
+          "straight_distance": 12.53,
+          "detour_ratio": 8.061
+        },
+        {
+          "interval": 1,
+          "u_in": 0.374,
+          "u_out": 0.3922,
+          "roi": [
+            0,
+            63,
+            0,
+            63
+          ],
+          "margin": "full_map",
+          "roi_attempt": 4,
+          "length": 82.0,
+          "straight_distance": 2.0,
+          "detour_ratio": 41.0
+        },
+        {
+          "interval": 2,
+          "u_in": 0.4105,
+          "u_out": 0.4287,
+          "roi": [
+            0,
+            63,
+            0,
+            63
+          ],
+          "margin": "full_map",
+          "roi_attempt": 4,
+          "length": 98.0,
+          "straight_distance": 2.0,
+          "detour_ratio": 49.0
+        }
+      ],
+      "support_length": 331.322,
+      "raw_length": 61.942,
+      "method": "M2",
+      "num_valid_sources": 64,
+      "valid_source_ratio": 1.0,
+      "num_duplicate_source_cells": 0
+    },
+    "support_length": 331.322
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "scene_id": "scene_001",
+  "index": 1,
+  "type": "A",
+  "type_name": "random_clutter",
+  "seed": 20260215,
+  "attempt": 0,
+  "size": 64,
+  "start": [
+    4,
+    10
+  ],
+  "goal": [
+    56,
+    60
+  ],
+  "stats": {
+    "components": 1,
+    "free_fraction": 0.6782,
+    "obstacle_cells": 1318,
+    "geodesic_sg": 102,
+    "euclid_sg": 72.14,
+    "open_cell_ratio": 0.9561,
+    "cycles": 2385,
+    "dead_end_cells": 21
+  },
+  "structure": {
+    "shape_count": 32,
+    "shape_kinds": [
+      "cross",
+      "ell",
+      "ellipse",
+      "polygon",
+      "rect",
+      "rotated_rect"
+    ],
+    "shape_histogram": {
+      "rect": 4,
+      "rotated_rect": 8,
+      "ellipse": 5,
+      "polygon": 4,
+      "cross": 3,
+      "ell": 8
+    },
+    "isolated_free_cells_removed": 115
+  }
+}

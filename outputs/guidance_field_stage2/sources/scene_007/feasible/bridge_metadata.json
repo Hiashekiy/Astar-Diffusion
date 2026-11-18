@@ -1,0 +1,66 @@
+{
+  "M0": {
+    "metadata": {
+      "num_raw_samples": 64,
+      "num_invalid_sources": 0,
+      "mean_projection_distance": null,
+      "max_projection_distance": null,
+      "num_collision_intervals": 0,
+      "num_bridged_intervals": null,
+      "bridge_success_rate": null,
+      "bridge_total_length": null,
+      "bridge_detour_ratio": null,
+      "roi_expansion_count": null,
+      "failures": [],
+      "method": "M0",
+      "num_valid_sources": 64,
+      "valid_source_ratio": 1.0,
+      "num_duplicate_source_cells": 0
+    },
+    "support_length": null
+  },
+  "M1": {
+    "metadata": {
+      "num_raw_samples": 64,
+      "num_invalid_sources": 0,
+      "mean_projection_distance": 0.0,
+      "max_projection_distance": 0.0,
+      "num_projected_sources": 0,
+      "num_collision_intervals": 0,
+      "num_bridged_intervals": null,
+      "bridge_success_rate": null,
+      "bridge_total_length": null,
+      "bridge_detour_ratio": null,
+      "roi_expansion_count": null,
+      "failures": [],
+      "method": "M1",
+      "num_valid_sources": 64,
+      "valid_source_ratio": 1.0,
+      "num_duplicate_source_cells": 0
+    },
+    "support_length": null
+  },
+  "M2": {
+    "metadata": {
+      "num_raw_samples": 64,
+      "num_invalid_sources": 0,
+      "mean_projection_distance": null,
+      "max_projection_distance": null,
+      "num_collision_intervals": 0,
+      "num_bridged_intervals": 0,
+      "bridge_success_rate": null,
+      "bridge_total_length": null,
+      "bridge_detour_ratio": null,
+      "roi_expansion_count": 0,
+      "failures": [],
+      "bridges": [],
+      "support_length": 143.0,
+      "raw_length": 143.0,
+      "method": "M2",
+      "num_valid_sources": 64,
+      "valid_source_ratio": 1.0,
+      "num_duplicate_source_cells": 0
+    },
+    "support_length": 143.0
+  }
+}

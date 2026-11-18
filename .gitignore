@@ -1,4 +1,7 @@
 __pycache__/
 *.pyc
 _scratch/
+_scratch2/
 *.log
+
+_dbg/

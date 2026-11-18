@@ -1,0 +1,99 @@
+{
+  "M0": {
+    "metadata": {
+      "num_raw_samples": 64,
+      "num_invalid_sources": 0,
+      "mean_projection_distance": null,
+      "max_projection_distance": null,
+      "num_collision_intervals": 2,
+      "num_bridged_intervals": null,
+      "bridge_success_rate": null,
+      "bridge_total_length": null,
+      "bridge_detour_ratio": null,
+      "roi_expansion_count": null,
+      "failures": [],
+      "method": "M0",
+      "num_valid_sources": 58,
+      "valid_source_ratio": 0.90625,
+      "num_duplicate_source_cells": 0
+    },
+    "support_length": null
+  },
+  "M1": {
+    "metadata": {
+      "num_raw_samples": 64,
+      "num_invalid_sources": 0,
+      "mean_projection_distance": 0.171875,
+      "max_projection_distance": 3.0,
+      "num_projected_sources": 6,
+      "num_collision_intervals": 2,
+      "num_bridged_intervals": null,
+      "bridge_success_rate": null,
+      "bridge_total_length": null,
+      "bridge_detour_ratio": null,
+      "roi_expansion_count": null,
+      "failures": [],
+      "method": "M1",
+      "num_valid_sources": 64,
+      "valid_source_ratio": 1.0,
+      "num_duplicate_source_cells": 0
+    },
+    "support_length": null
+  },
+  "M2": {
+    "metadata": {
+      "num_raw_samples": 64,
+      "num_invalid_sources": 0,
+      "mean_projection_distance": null,
+      "max_projection_distance": null,
+      "num_collision_intervals": 2,
+      "num_bridged_intervals": 2,
+      "bridge_success_rate": 1.0,
+      "bridge_total_length": 50.0,
+      "bridge_detour_ratio": 3.671,
+      "roi_expansion_count": 2,
+      "failures": [],
+      "bridges": [
+        {
+          "interval": 0,
+          "u_in": 0.7412,
+          "u_out": 0.7745,
+          "roi": [
+            37,
+            48,
+            17,
+            29
+          ],
+          "margin": 4,
+          "roi_attempt": 0,
+          "length": 15.0,
+          "straight_distance": 5.0,
+          "detour_ratio": 3.0
+        },
+        {
+          "interval": 1,
+          "u_in": 0.7856,
+          "u_out": 0.8522,
+          "roi": [
+            28,
+            63,
+            0,
+            37
+          ],
+          "margin": 16,
+          "roi_attempt": 2,
+          "length": 35.0,
+          "straight_distance": 8.062,
+          "detour_ratio": 4.341
+        }
+      ],
+      "support_length": 150.231,
+      "raw_length": 109.623,
+      "method": "M2",
+      "num_valid_sources": 64,
+      "valid_source_ratio": 1.0,
+      "num_duplicate_source_cells": 0
+    },
+    "support_length": 150.231
+  }
+}

@@ -1,152 +1,204 @@
-# Guidance Field — Stage 1
+# Guidance Field — Stage 1 & Stage 2A
 
-Mechanism check for one question only:
+Two mechanism-validation stages for one idea: turn a trajectory into a 2-D obstacle-aware
+guidance field.
 
-> Given a feasible trajectory from S to G, can trajectory sampling + weighted
-> multi-source propagation turn a 1-D trajectory into a 2-D guidance field that
-> carries global spatial structure?
+- **Stage 1** — can a *feasible* trajectory become a field with global structure? Yes,
+  7/7 acceptance. Details: [`docs/stage1-report.md`](docs/stage1-report.md).
+- **Stage 2A** — can a *colliding* trajectory (local wall crossings, whole segments inside
+  obstacles) still yield a legal, continuous, directional field? Yes, 34/34 acceptance,
+  with a data-driven answer to "which repair method wins where".
+  Details: [`docs/stage2-report.md`](docs/stage2-report.md).
 
-**No learning, no search, no diffusion.** Every trajectory in this stage comes from
-traditional graph search (`A*`, weighted `A*`, greedy best-first, waypoint-constrained
-`A*`), and the only outputs are fields, figures and statistics. Search speed-up is
-stage 2.
+**No learning, no search, no diffusion in either stage.** Trajectories come from
+traditional graph search; search integration is stage 2B.
 
 ## Quick start
 
 ```bash
 pip install -r requirements.txt
 
-python scripts/run_stage1.py           # 20 maps x 4 quality grades x 3 weightings (~45 s)
-python scripts/check_acceptance.py     # audit the artifacts against the 7 criteria
-python -m unittest discover -s tests   # 16 unit tests (~2 s)
+python scripts/run_stage1.py           # 20 maps x 4 grades x 3 weightings (~46 s)
+python scripts/check_acceptance.py     # stage-1 audit, 7 criteria
+python scripts/run_stage2.py           # 20 maps x 4 grades x 3 methods x 3 weights = 720 fields (~80 s)
+python scripts/check_stage2.py         # stage-2 audit, 34 criteria (A-E)
+python -m unittest discover -s tests   # 33 unit tests (~4 s)
 ```
 
-Useful flags: `--quick` (one map per scene type), `--no-figures`, `--no-lambda-sweep`,
-`--outdir`, `--lam`, `--samples`.
+Flags: `--quick` (one map per family), `--no-figures`, `--outdir`, `--lam`, `--samples`.
 
 ## The mechanism
 
-For a trajectory resampled at `M = 32` equal-arc points `s_0..s_31` with strength `w_i`
-and decay `lambda`:
+For samples `s_i` at arc-length progress `u_i`, with strength `w(u_i)` and decay `lam`:
 
 ```
-F(x) = max_i [ w_i - lambda * d_free(x, s_i) ]        d_free = obstacle-aware geodesic distance
+F(x) = max_i [ w(u_i) - lam * d_free(x, s_i) ]     d_free = obstacle-aware geodesic distance
 ```
 
-Implemented as one max-Dijkstra seeded with all 32 sources, so walls block propagation
-exactly as they block movement. Three weightings are compared on every trajectory:
+Stage 1 builds it directly from a feasible trajectory. Stage 2A must first turn a raw
+*colliding* trajectory into legal free-space sources: obstacle cells never reach the
+propagator, and the stored trajectory is never silently repaired.
 
-| Field | weights | intent |
-|---|---|---|
-| A | `w_i = 1` | plain multi-source distance field (baseline) |
-| B | `w_i = u_i` | linear ramp 0→1 from S to G |
-| C | `w_i = u_i^2` | reinforces the goal end |
+---
 
-## Scenes
+# Stage 1 — feasible trajectory -> field
 
-Four non-perfect maze families, `64 x 64`, 5 random instances each (seeds are fixed, so
-runs are reproducible):
+20 maps (4 maze families x 5) · 80 trajectories graded by measured `rho = L/L*` ·
+Field-A/B/C = uniform / linear / quadratic weights.
 
-| Type | name | why it exists |
-|---|---|---|
-| A | `dual_corridor` | two parallel channels; the lower one is longer by a forced 2·dy step |
-| B | `detour_block` | one large central block; top bypass is direct, bottom bypass carries a bump |
-| C | `dead_end_branches` | crooked corridor + tempting dead ends + bypass loops |
-| D | `multi_branch_maze` | 31x31 lattice with loops, rooms, isolated blocks and pockets |
-
-S and G are placed by the generator that knows the topology (level and between the two
-corridor mouths for A/B, corridor ends for C, farthest pair for D). Every instance is
-validated: single free component, `d(S,G) >= 45`, free fraction in `[0.03, 0.80]`, and
-`1 + max_detour/L* >= 1.35` — i.e. a Poor-grade detour must actually exist.
-
-## Trajectory quality
-
-Quality is graded by the **measured path-cost ratio** `rho = L(P) / L(P*)`, never by the
-name of the algorithm that produced it:
-
-| grade | rho |
+| verified | value |
 |---|---|
-| excellent | 1.00 – 1.05 |
-| good | 1.05 – 1.15 |
-| medium | 1.15 – 1.30 |
-| poor | > 1.30 |
+| Field-A matches `1 - lam*d_free` | 5.7e-08 |
+| Field-B matches `max_i[w_i - lam*d_free]` | 5.9e-08 |
+| walls block propagation | corr with geodesic -1.000 vs -0.930 with straight line |
+| weighting adds direction | delta_F: **-0.001** (uniform) / **+0.985** (linear) / **+0.996** (quadratic) |
+| quality shows up in the field | corr(path divergence, field divergence) = **0.886** |
+| correct channel vs dead end | AUC **1.000**, pocket suppression 0.18-0.37 |
 
-Each map gets a pool of ~70–90 feasible trajectories (`A*`, weighted `A*` at 1.15/1.5/2/3,
-greedy best-first, heuristic-perturbed `A*` for near-optimal-but-different routes, 48
-waypoint `A*` candidates biased toward deep pockets, and 24 two-waypoint chains). One
-candidate per grade is selected by distance to the grade centre, preferring trajectories
-that do **not** double back — a dead-end excursion retraces cells the field already
-covers and would show up much less clearly than a genuine alternative corridor.
+Stage-1 outputs live in `outputs/guidance_field_stage1/`: `scenes/ paths/ fields/ figures/`
+plus `summary.json`, `acceptance.json`, `acceptance.txt`, `analysis/lambda_sensitivity.json`.
+Per scene: 4-panel figures per grade, `trajectories.png`, `comparison.png`, `owners.png`,
+`profiles.png`, plus `figures/scene_gallery.png` for all 20 maps.
 
-## Outputs
+---
+
+# Stage 2A — colliding trajectory -> field
+
+## Maps: complex occupancy instead of carved corridors
+
+| family | generation | free fraction |
+|---|---|---|
+| A `random_clutter` | rect / rotated rect / ellipse / polygon / cross / L rasterised | 0.64-0.78 |
+| B `rooms_and_corridors` | BSP rooms + door openings in walls + furniture | 0.63-0.79 |
+| C `multi_branch_maze` | DFS skeleton + widened passages + loops + dead ends + rooms | 0.46-0.48 |
+| D `structured_topology` | U / C / L / comb + gate pairs + clusters + bottlenecks | 0.69-0.78 |
+
+Every map is validated (single free component, `d(S,G) >= 30`, per-family free-fraction
+band, enough obstacle structure, not one narrow corridor) and reproducible from its seed
+(re-checked by regenerating and comparing cell by cell).
+
+## Trajectories: graded by *measured* collision ratio
+
+| grade | band | measured | mean intervals |
+|---|---|---|---|
+| G0 `feasible` | 0 | 0.000 | 0.0 |
+| G1 `mild_collision` | 0.01-0.05 | 0.030 | 1.9 |
+| G2 `moderate_collision` | 0.05-0.15 | 0.100 | 3.5 |
+| G3 `severe_collision` | 0.15-0.30 | 0.223 | 6.0 |
+
+Generated by **shortcut** (primary), **Bezier** (supplement) and **directed crossing**
+(coverage), then selected by measured ratio — never by generator name. An anchor-gap
+ladder fills bands that random sampling leaves empty. `rho` is kept only as an auxiliary
+statistic: a wall-crossing shortcut is often *shorter* than the reference (rho down to 0.49).
+
+Collision detection is line-segment based (supercover traversal of every crossed cell), so
+a segment with two free endpoints still counts when it crosses a wall.
+
+## Three source-handling methods
+
+| | rule | sources (severe) | progress coverage |
+|---|---|---|---|
+| **M0** drop | discard obstacle samples, keep the original `u` | 49.9/64 | 0.796 |
+| **M1** project | snap to the nearest free cell (r <= 3), keep `u` | 63.4/64 | 0.992 |
+| **M2** bridge | local ROI A* per collision interval, inherits the interval's `u` range | 64/64 | 0.762 |
+
+M2's ROI escalation (margin 4 -> 8 -> 16 -> 32 -> full map): 166 bridges solved at margin
+4, only **4 of 223** needed the full map. No repaired geometry ever replaces the raw
+trajectory on disk.
+
+## Result: M2 is not universally better
+
+MAE against the field built from the collision-free reference (linear weights):
+
+| grade | M0 | M1 | M2 |
+|---|---|---|---|
+| mild | 0.031 | 0.031 | **0.024** |
+| moderate | 0.087 | 0.085 | **0.063** |
+| severe | 0.141 | 0.144 | **0.113** |
+
+Severe collisions, by map family:
+
+| family | M0 | M1 | M2 | reading |
+|---|---|---|---|---|
+| A open clutter | 0.057 | 0.057 | 0.057 | collisions barely matter |
+| B rooms | 0.270 | 0.275 | **0.164** | M2 clearly wins (-39%) |
+| C maze | **0.130** | 0.139 | 0.137 | M0 and M2 tie |
+| D structured | 0.107 | 0.106 | **0.094** | M2 slightly better |
+
+Weighting ablation (M2, severe): delta_F = 0.000 (uniform) / +0.954 (linear) / +0.988
+(quadratic); distinct owners 61.5 / 52.6 / 49.0 — quadratic trades structure for goal
+emphasis. The uniform field has the best channel AUC (0.840): it discriminates "near vs
+far from the trajectory" better, while weighting buys directionality. The two carry
+complementary information.
+
+## Stage-2A outputs
 
 ```
-outputs/guidance_field_stage1/
+outputs/guidance_field_stage2/
 ├── scenes/scene_XXX/{occupancy.npy, start_goal.npy, metadata.json}
-├── paths/scene_XXX/{excellent,good,medium,poor}.npy          full trajectory (K,2)
-│                    {excellent,...}_samples.npy               the 32 arc-length sources
-│                    metadata.json                             rho, length, generator, backtracks
-├── fields/scene_XXX/{grade}_{uniform,linear,quadratic}.npy   float32, NaN on obstacles
-├── figures/scene_XXX/{grade}.png                             the 4-panel figure
-│                     trajectories.png                        all 4 grades on one map
-│                     comparison.png                          3 weightings x 4 qualities
-│                     owners.png                              dominant-source partition
-│                     profiles.png                            F(s_i) along the trajectory
-├── figures/scene_gallery.png                                 all 20 scenes x 4 grades
-├── figures/{summary.png, lambda_sensitivity.png}
-├── analysis/lambda_sensitivity.json
-├── summary.json                                              config, aggregates, per-scene records
-├── acceptance.json / acceptance.txt                          the 7 criteria with evidence
+├── trajectories/scene_XXX/{reference_astar,feasible,mild_collision,
+│                            moderate_collision,severe_collision}.npy   float (N,2)
+│                          metadata.json        collision stats + intervals + generator + params
+├── sources/scene_XXX/<grade>/{M0,M1,M2}_sources.npz + bridge_metadata.json
+├── fields/scene_XXX/<grade>/{M0,M1,M2}_{uniform,linear,quadratic}.npy  (720 fields)
+├── figures/map_gallery.png, figures/scene_XXX/*.png, figures/summary/*.png
+├── analysis/{per_case_metrics.csv, aggregate_metrics.json}
+└── summary.json, acceptance.json, acceptance.txt
 ```
+
+Per scene: `trajectories.png`, `collision_intervals.png`, `source_methods.png`,
+`field_methods_linear.png` (rows raw/M0/M1/M2 x columns G0-G3),
+`M2_weight_ablation.png`, `field_difference.png` (method minus reference, the panel where
+the methods actually differ), `owners.png`, `progress_profiles.png`.
+
+---
 
 ## Module map
 
 | file | role |
 |---|---|
-| `config.py` | every tunable and grade boundary, in one frozen dataclass |
-| `grid.py` | occupancy grid, 4-neighbour geodesics, components, cycle rank, leaf peeling, `detour_profile`, geodesic balls |
-| `scenes.py` | the four generators, carving helpers, structural validation |
-| `paths.py` | `A*`/weighted/greedy/waypoint search, arc-length resampling, candidate pool, grade selection |
-| `fields.py` | weight families and the weighted multi-source propagation, plus all field measurements |
-| `viz.py` | all figures |
-| `pipeline.py` | orchestration and JSON output |
-| `acceptance.py` | the 7 criteria, re-derived from the saved files |
-
-`detour_profile` deserves a note: `detour(x) = d(S,x) + d(x,G) - d(S,G)` is 0 exactly on
-some optimal route and grows with how far off-route a cell sits. It depends only on the
-map, so it is the fair, path-independent label for "correct channel vs. wrong branch".
+| `src/guidance_stage1/grid.py` | occupancy grid, 4-neighbour geodesics, components, cycle rank, `detour_profile`, geodesic balls |
+| `src/guidance_stage1/paths.py` | A* / weighted A* / greedy / waypoint search, arc-length resampling, teacher-free trajectory pool |
+| `src/guidance_stage1/fields.py` | **the propagation used by both stages** (`propagate`) |
+| `src/guidance_stage1/scenes.py`, `viz.py`, `pipeline.py`, `acceptance.py` | stage-1 maps, figures, orchestration, audit |
+| `src/guidance_stage2/collision.py` | continuous-trajectory vs grid collision geometry (supercover traversal, intervals, projection) |
+| `src/guidance_stage2/scenes.py` | the four stage-2 map families + validation |
+| `src/guidance_stage2/trajectories.py` | reference A*, shortcut/Bezier/directed candidates, band selection by measured ratio |
+| `src/guidance_stage2/source_methods.py` | M0 drop / M1 project / M2 local bridging, progress inheritance |
+| `src/guidance_stage2/fields.py`, `metrics.py` | fields from legal sources, all indicators |
+| `src/guidance_stage2/visualization.py`, `pipeline.py`, `acceptance.py` | figures, orchestration, audit |
 
 ## Design decisions worth knowing
 
-- **Arc-length, not node index.** Node density varies wildly between an `A*` path and a
-  waypoint path; sources must represent equal spatial progress.
-- **A trajectory that doubles back legitimately yields repeated source cells.** The
-  propagation keeps the strongest weight at a shared cell instead of failing.
-- **Geodesic balls for region statistics.** A Euclidean disk around S or G reaches across
-  walls and pollutes `F_start`/`F_goal`; the geodesic ball is the meaningful region.
-- **Display ranges are per weighting and clipped.** Far from the trajectory every field
-  decays to a large negative number; letting that tail set the colour scale makes the
-  0→1 ramp invisible. Raw extremes stay in the data, the colorbar marks the clip.
-- **`lambda` scale.** The useful regime is `lambda * L ~ 1..4`. Below that the strongest
-  source floods the whole map (at `lambda = 0.005` a single source owns 98% of the cells),
-  above it the field collapses toward nearest-source distance. `0.02` for `L = 60..190`
-  keeps 28–32 of the 32 sources owning part of the map. See `analysis/lambda_sensitivity.json`.
+- **Progress is never renormalised.** `u` is always the arc-length fraction along the
+  *raw* trajectory, so a dropped collision interval leaves a real hole in the u axis.
+- **Collision is a segment property, not a point property.** Two free samples can hide a
+  wall crossing; the traversal reports every crossed cell with its parameter interval.
+- **M2 is local by construction.** Bridges are anchored at the free entry/exit cells of a
+  specific collision interval; the check for "not a global replan" is that bridge count
+  equals interval count and the support path still keeps the original free segments.
+- **Geodesic balls** for start/goal region statistics (a Euclidean disk reaches across walls).
+- **Display ranges are per weighting and clipped**: far from the trajectory every field
+  decays to a large negative number, and letting that tail set the colour scale hides the
+  0->1 ramp. Raw extremes stay in the data.
+- **`lam` scale**: the useful regime is `lam * L ~ 1..4`; below it the strongest single
+  source floods the map, above it the field collapses towards nearest-source distance.
 
-## What stage 1 established
+## Known limits
 
-All 7 acceptance criteria pass (see `outputs/guidance_field_stage1/acceptance.txt`):
-fields are stable and exactly equal to the closed form, walls block propagation,
-strengths are monotone, a continuous high-response band follows every trajectory, field
-divergence tracks trajectory divergence (`r = 0.886`), off-route pockets are separated
-from the trajectory's own channel (AUC = 1.0), and the goal weighting turns a flat
-distance field into a directional one (`delta_F: -0.001 → +0.985`).
+1. Grid metric only: 4-neighbour geodesics, no anisotropic or continuous-space field.
+2. Trajectory "quality" in stage 1 is purely length-based; clearance and smoothness are
+   not modelled.
+3. Stage-2 collision bands stop at 30%: heavier corruption (a trajectory that is mostly
+   inside obstacles) is out of scope here.
+4. M2's spatial-uniform resampling costs progress coverage (0.762 vs 0.992 for M1) — a
+   real trade-off, not hidden in the statistics.
+5. Pixel content of figures is not machine-checked; acceptance verifies the underlying
+   data and that the files exist.
 
-Full discussion, numbers and caveats: [`docs/stage1-report.md`](docs/stage1-report.md).
+## Next stage (Stage 2B, not implemented)
 
-## Next stage (not implemented here)
-
-`Global Guidance Field -> A* / Focal Search`: use `F` as a heuristic/prior, measure node
-expansion, direction agreement and end-to-end planning time against the plain geometric
-heuristic. The honest caveat from stage 1 is that the field faithfully encodes whatever
-trajectory it is given — it will not repair a bad one — so stage 2 needs a robustness
-mechanism rather than blind trust in the prior.
+Feed the fields into A* / Focal Search and measure success rate, node expansions, time and
+final path length against the plain geometric heuristic, for standard A*, focal search
+without a guidance field, and the M0 / M1 / M2 fields. Nothing here claims the field makes
+search faster — the stage-1/2A evidence is about the field's structure, not its utility.

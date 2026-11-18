@@ -1,0 +1,273 @@
+{
+  "scene_id": "scene_019",
+  "map_type": "D",
+  "seed": 20263218,
+  "reference": {
+    "length": 111.0,
+    "num_nodes": 112,
+    "generator": "astar"
+  },
+  "coverage": {
+    "num_candidates": 447,
+    "num_by_generator": {
+      "shortcut": 385,
+      "bezier": 60,
+      "directed_crossing": 2
+    },
+    "num_with_collision": 356,
+    "max_collision_ratio": 0.42998875863993563,
+    "missing_grades": []
+  },
+  "trajectories": {
+    "feasible": {
+      "generator": "astar_reference",
+      "params": {},
+      "num_stored_points": 112,
+      "metrics": {
+        "path_length": 111.0,
+        "collision_length": 0.0,
+        "collision_ratio": 0.0,
+        "collision_interval_count": 0,
+        "max_collision_interval_length": 0.0,
+        "collision_sample_ratio": 0.0,
+        "num_detection_samples": 556,
+        "reference_path_length": 111.0,
+        "rho": 1.0
+      },
+      "collision_intervals": []
+    },
+    "mild_collision": {
+      "generator": "shortcut",
+      "params": {
+        "anchors": [
+          [
+            88,
+            98
+          ]
+        ],
+        "ladder": true
+      },
+      "num_stored_points": 103,
+      "metrics": {
+        "path_length": 108.61577310586391,
+        "collision_length": 3.263902759655963,
+        "collision_ratio": 0.030049988747718564,
+        "collision_interval_count": 2,
+        "max_collision_interval_length": 2.538591035287979,
+        "collision_sample_ratio": 0.031192660550458717,
+        "num_detection_samples": 545,
+        "reference_path_length": 111.0,
+        "rho": 0.9785204784312064
+      },
+      "collision_intervals": [
+        {
+          "index": 0,
+          "s_in": 88.543983793276,
+          "s_out": 89.26929551764398,
+          "u_in": 0.8152037338718323,
+          "u_out": 0.821881509149103,
+          "length": 0.7253117243679839,
+          "entry_point_rc": [
+            52.214285714285715,
+            28.499999999999996
+          ],
+          "exit_point_rc": [
+            52.5,
+            27.833333333333336
+          ],
+          "entry_cell": [
+            52,
+            29
+          ],
+          "exit_cell": [
+            53,
+            28
+          ]
+        },
+        {
+          "index": 1,
+          "s_in": 91.80788655293195,
+          "s_out": 94.34647758821993,
+          "u_in": 0.8452537226195507,
+          "u_out": 0.8686259360899985,
+          "length": 2.538591035287979,
+          "entry_point_rc": [
+            53.5,
+            25.500000000000007
+          ],
+          "exit_point_rc": [
+            54.5,
+            23.166666666666664
+          ],
+          "entry_cell": [
+            53,
+            26
+          ],
+          "exit_cell": [
+            55,
+            23
+          ]
+        }
+      ]
+    },
+    "moderate_collision": {
+      "generator": "shortcut",
+      "params": {
+        "anchors": [
+          [
+            66,
+            108
+          ]
+        ],
+        "ladder": true
+      },
+      "num_stored_points": 71,
+      "metrics": {
+        "path_length": 100.30495168499706,
+        "collision_length": 10.06230589874906,
+        "collision_ratio": 0.10031714017817638,
+        "collision_interval_count": 1,
+        "max_collision_interval_length": 10.06230589874906,
+        "collision_sample_ratio": 0.10139165009940358,
+        "num_detection_samples": 503,
+        "reference_path_length": 111.0,
+        "rho": 0.9036482133783519
+      },
+      "collision_intervals": [
+        {
+          "index": 0,
+          "s_in": 81.09345884812357,
+          "s_out": 91.15576474687263,
+          "u_in": 0.8084691481911455,
+          "u_out": 0.9087862883693218,
+          "length": 10.06230589874906,
+          "entry_point_rc": [
+            44.49999999999999,
+            23.250000000000004
+          ],
+          "exit_point_rc": [
+            53.49999999999999,
+            18.750000000000004
+          ],
+          "entry_cell": [
+            44,
+            23
+          ],
+          "exit_cell": [
+            54,
+            19
+          ]
+        }
+      ]
+    },
+    "severe_collision": {
+      "generator": "bezier",
+      "params": {
+        "control_points": [
+          [
+            8.0,
+            35.0
+          ],
+          [
+            26.48,
+            52.92
+          ],
+          [
+            37.95,
+            29.08
+          ],
+          [
+            62.0,
+            16.0
+          ]
+        ]
+      },
+      "num_stored_points": 336,
+      "metrics": {
+        "path_length": 63.72046062513155,
+        "collision_length": 14.341412250820902,
+        "collision_ratio": 0.2250676173731959,
+        "collision_interval_count": 3,
+        "max_collision_interval_length": 6.554402538071656,
+        "collision_sample_ratio": 0.2180293501048218,
+        "num_detection_samples": 477,
+        "reference_path_length": 111.0,
+        "rho": 0.5740582038300139
+      },
+      "collision_intervals": [
+        {
+          "index": 0,
+          "s_in": 5.5308285660334375,
+          "s_out": 9.87153772609145,
+          "u_in": 0.08679831425845125,
+          "u_out": 0.15491943449947512,
+          "length": 4.3407091600580126,
+          "entry_point_rc": [
+            12.272574149029394,
+            38.5
+          ],
+          "exit_point_rc": [
+            16.114459106604663,
+            40.5
+          ],
+          "entry_cell": [
+            12,
+            38
+          ],
+          "exit_cell": [
+            16,
+            41
+          ]
+        },
+        {
+          "index": 1,
+          "s_in": 20.318793556979422,
+          "s_out": 23.765094109670656,
+          "u_in": 0.31887392774065454,
+          "u_out": 0.37295860507790535,
+          "length": 3.446300552691234,
+          "entry_point_rc": [
+            26.340499327607223,
+            40.5
+          ],
+          "exit_point_rc": [
+            29.5,
+            39.13087255658077
+          ],
+          "entry_cell": [
+            26,
+            41
+          ],
+          "exit_cell": [
+            30,
+            39
+          ]
+        },
+        {
+          "index": 2,
+          "s_in": 48.346049676426794,
+          "s_out": 54.90045221449845,
+          "u_in": 0.7587209697187745,
+          "u_out": 0.8615827895136957,
+          "length": 6.554402538071656,
+          "entry_point_rc": [
+            49.2082923182045,
+            24.5
+          ],
+          "exit_point_rc": [
+            54.5,
+            20.633719060232043
+          ],
+          "entry_cell": [
+            49,
+            25
+          ],
+          "exit_cell": [
+            55,
+            21
+          ]
+        }
+      ]
+    }
+  }
+}

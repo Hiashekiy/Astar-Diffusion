@@ -1,0 +1,163 @@
+{
+  "M0": {
+    "metadata": {
+      "num_raw_samples": 64,
+      "num_invalid_sources": 0,
+      "mean_projection_distance": null,
+      "max_projection_distance": null,
+      "num_collision_intervals": 6,
+      "num_bridged_intervals": null,
+      "bridge_success_rate": null,
+      "bridge_total_length": null,
+      "bridge_detour_ratio": null,
+      "roi_expansion_count": null,
+      "failures": [],
+      "method": "M0",
+      "num_valid_sources": 49,
+      "valid_source_ratio": 0.765625,
+      "num_duplicate_source_cells": 0
+    },
+    "support_length": null
+  },
+  "M1": {
+    "metadata": {
+      "num_raw_samples": 64,
+      "num_invalid_sources": 0,
+      "mean_projection_distance": 0.296875,
+      "max_projection_distance": 2.0,
+      "num_projected_sources": 15,
+      "num_collision_intervals": 6,
+      "num_bridged_intervals": null,
+      "bridge_success_rate": null,
+      "bridge_total_length": null,
+      "bridge_detour_ratio": null,
+      "roi_expansion_count": null,
+      "failures": [],
+      "method": "M1",
+      "num_valid_sources": 64,
+      "valid_source_ratio": 1.0,
+      "num_duplicate_source_cells": 1
+    },
+    "support_length": null
+  },
+  "M2": {
+    "metadata": {
+      "num_raw_samples": 64,
+      "num_invalid_sources": 0,
+      "mean_projection_distance": null,
+      "max_projection_distance": null,
+      "num_collision_intervals": 6,
+      "num_bridged_intervals": 6,
+      "bridge_success_rate": 1.0,
+      "bridge_total_length": 198.0,
+      "bridge_detour_ratio": 5.949,
+      "roi_expansion_count": 8,
+      "failures": [],
+      "bridges": [
+        {
+          "interval": 0,
+          "u_in": 0.4198,
+          "u_out": 0.4508,
+          "roi": [
+            30,
+            63,
+            9,
+            43
+          ],
+          "margin": 16,
+          "roi_attempt": 2,
+          "length": 28.0,
+          "straight_distance": 4.472,
+          "detour_ratio": 6.261
+        },
+        {
+          "interval": 1,
+          "u_in": 0.575,
+          "u_out": 0.606,
+          "roi": [
+            0,
+            63,
+            1,
+            63
+          ],
+          "margin": 32,
+          "roi_attempt": 3,
+          "length": 61.0,
+          "straight_distance": 4.123,
+          "detour_ratio": 14.795
+        },
+        {
+          "interval": 2,
+          "u_in": 0.6069,
+          "u_out": 0.6677,
+          "roi": [
+            21,
+            35,
+            30,
+            42
+          ],
+          "margin": 4,
+          "roi_attempt": 0,
+          "length": 16.0,
+          "straight_distance": 7.211,
+          "detour_ratio": 2.219
+        },
+        {
+          "interval": 3,
+          "u_in": 0.6879,
+          "u_out": 0.6888,
+          "roi": [
+            19,
+            28,
+            34,
+            43
+          ],
+          "margin": 4,
+          "roi_attempt": 0,
+          "length": 2.0,
+          "straight_distance": 1.414,
+          "detour_ratio": 1.414
+        },
+        {
+          "interval": 4,
+          "u_in": 0.7689,
+          "u_out": 0.844,
+          "roi": [
+            0,
+            48,
+            10,
+            63
+          ],
+          "margin": 32,
+          "roi_attempt": 3,
+          "length": 86.0,
+          "straight_distance": 8.944,
+          "detour_ratio": 9.615
+        },
+        {
+          "interval": 5,
+          "u_in": 0.8499,
+          "u_out": 0.8751,
+          "roi": [
+            1,
+            12,
+            42,
+            52
+          ],
+          "margin": 4,
+          "roi_attempt": 0,
+          "length": 5.0,
+          "straight_distance": 3.606,
+          "detour_ratio": 1.387
+        }
+      ],
+      "support_length": 287.071,
+      "raw_length": 108.537,
+      "method": "M2",
+      "num_valid_sources": 64,
+      "valid_source_ratio": 1.0,
+      "num_duplicate_source_cells": 0
+    },
+    "support_length": 287.071
+  }
+}

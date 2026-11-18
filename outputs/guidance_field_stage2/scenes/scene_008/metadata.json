@@ -1,0 +1,113 @@
+{
+  "scene_id": "scene_008",
+  "index": 8,
+  "type": "B",
+  "type_name": "rooms_and_corridors",
+  "seed": 20261217,
+  "attempt": 0,
+  "size": 64,
+  "start": [
+    4,
+    49
+  ],
+  "goal": [
+    50,
+    60
+  ],
+  "stats": {
+    "components": 1,
+    "free_fraction": 0.6741,
+    "obstacle_cells": 1335,
+    "geodesic_sg": 147,
+    "euclid_sg": 47.3,
+    "open_cell_ratio": 0.9544,
+    "cycles": 2302,
+    "dead_end_cells": 8
+  },
+  "structure": {
+    "room_count": 13,
+    "door_count": 20,
+    "furniture_count": 20,
+    "rooms": [
+      [
+        1,
+        5,
+        1,
+        9
+      ],
+      [
+        17,
+        24,
+        1,
+        9
+      ],
+      [
+        26,
+        30,
+        1,
+        9
+      ],
+      [
+        32,
+        56,
+        1,
+        9
+      ],
+      [
+        58,
+        62,
+        1,
+        9
+      ],
+      [
+        1,
+        10,
+        11,
+        31
+      ],
+      [
+        12,
+        32,
+        11,
+        31
+      ],
+      [
+        1,
+        23,
+        33,
+        62
+      ],
+      [
+        25,
+        32,
+        33,
+        62
+      ],
+      [
+        34,
+        62,
+        11,
+        31
+      ],
+      [
+        34,
+        62,
+        33,
+        54
+      ],
+      [
+        34,
+        53,
+        56,
+        62
+      ],
+      [
+        55,
+        62,
+        56,
+        62
+      ]
+    ],
+    "isolated_free_cells_removed": 12
+  }
+}

@@ -1,0 +1,83 @@
+{
+  "M0": {
+    "metadata": {
+      "num_raw_samples": 64,
+      "num_invalid_sources": 0,
+      "mean_projection_distance": null,
+      "max_projection_distance": null,
+      "num_collision_intervals": 1,
+      "num_bridged_intervals": null,
+      "bridge_success_rate": null,
+      "bridge_total_length": null,
+      "bridge_detour_ratio": null,
+      "roi_expansion_count": null,
+      "failures": [],
+      "method": "M0",
+      "num_valid_sources": 62,
+      "valid_source_ratio": 0.96875,
+      "num_duplicate_source_cells": 0
+    },
+    "support_length": null
+  },
+  "M1": {
+    "metadata": {
+      "num_raw_samples": 64,
+      "num_invalid_sources": 0,
+      "mean_projection_distance": 0.03125,
+      "max_projection_distance": 1.0,
+      "num_projected_sources": 2,
+      "num_collision_intervals": 1,
+      "num_bridged_intervals": null,
+      "bridge_success_rate": null,
+      "bridge_total_length": null,
+      "bridge_detour_ratio": null,
+      "roi_expansion_count": null,
+      "failures": [],
+      "method": "M1",
+      "num_valid_sources": 64,
+      "valid_source_ratio": 1.0,
+      "num_duplicate_source_cells": 1
+    },
+    "support_length": null
+  },
+  "M2": {
+    "metadata": {
+      "num_raw_samples": 64,
+      "num_invalid_sources": 0,
+      "mean_projection_distance": null,
+      "max_projection_distance": null,
+      "num_collision_intervals": 1,
+      "num_bridged_intervals": 1,
+      "bridge_success_rate": 1.0,
+      "bridge_total_length": 50.0,
+      "bridge_detour_ratio": 11.18,
+      "roi_expansion_count": 2,
+      "failures": [],
+      "bridges": [
+        {
+          "interval": 0,
+          "u_in": 0.4528,
+          "u_out": 0.4828,
+          "roi": [
+            13,
+            49,
+            0,
+            34
+          ],
+          "margin": 16,
+          "roi_attempt": 2,
+          "length": 50.0,
+          "straight_distance": 4.472,
+          "detour_ratio": 11.18
+        }
+      ],
+      "support_length": 160.649,
+      "raw_length": 113.765,
+      "method": "M2",
+      "num_valid_sources": 64,
+      "valid_source_ratio": 1.0,
+      "num_duplicate_source_cells": 0
+    },
+    "support_length": 160.649
+  }
+}
