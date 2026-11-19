@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from guidance_stage1.fields import propagate, weight_at_progress
+from guidance_stage1.fields import weight_at_progress
+from .propagation import propagate as propagate_field
 from guidance_stage1.grid import Grid
 from guidance_stage2.config import WEIGHT_KINDS
 
@@ -19,7 +20,8 @@ def source_weights(progress: np.ndarray, kind: str) -> np.ndarray:
     return np.asarray(weight_at_progress(np.asarray(progress, dtype=np.float64), kind), dtype=np.float64)
 
 
-def build_weighted_field(grid: Grid, sources: dict, kind: str, lam: float) -> dict:
+def build_weighted_field(grid: Grid, sources: dict, kind: str, lam: float,
+                         method: str = "auto") -> dict:
     """One field for one (source set, weighting) pair."""
     positions = np.asarray(sources["positions_rc"], dtype=int).reshape(-1, 2)
     progress = np.asarray(sources["progress"], dtype=np.float64).reshape(-1)
@@ -32,7 +34,8 @@ def build_weighted_field(grid: Grid, sources: dict, kind: str, lam: float) -> di
             "empty": True,
         }
     weights = source_weights(progress, kind)
-    field, owner = propagate(grid, positions, weights, lam)
+    field, owner = propagate_field(grid, positions, weights, lam, method=method,
+                                       return_owner=True)
     return {
         "field": np.asarray(field, dtype=np.float64),
         "owner": owner,

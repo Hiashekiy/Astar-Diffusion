@@ -15,6 +15,7 @@ only pay for the source-specific virtual edges and shortest-path solve.
 from __future__ import annotations
 
 import heapq
+import weakref
 from weakref import WeakKeyDictionary
 
 import numpy as np
@@ -24,7 +25,7 @@ from scipy.sparse.csgraph import dijkstra
 from guidance_stage1.grid import Grid
 
 NEG_INF = -np.inf
-_CSR_CACHE = WeakKeyDictionary()
+_CSR_CACHE = weakref.WeakKeyDictionary()  # auto-evicts when a Grid is collected
 
 
 def _validate_inputs(grid: Grid, samples, weights, lam: float):

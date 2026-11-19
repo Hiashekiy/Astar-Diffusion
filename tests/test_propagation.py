@@ -91,11 +91,13 @@ class PropagationEquivalence(unittest.TestCase):
         np.testing.assert_allclose(out, ref, rtol=0.0, atol=1e-10, equal_nan=True)
 
     def test_invalid_sources_and_lam_are_rejected(self):
-        g = self.grids[0]
+        g = self.grids[2]  # this grid has obstacles (rows 4..6 x cols 4..8)
         with self.assertRaises(ValueError):
-            propagate_scipy(g, np.array([[0, 0]]), np.array([1.0]), LAM)
+            propagate_scipy(g, np.array([[5, 5]]), np.array([1.0]), LAM)  # source inside an obstacle
         with self.assertRaises(ValueError):
-            propagate_scipy(g, np.array([[2, 2]]), np.array([1.0]), 0.0)
+            propagate_scipy(g, np.array([[0, 0]]), np.array([1.0]), 0.0)  # lam must be > 0
+        with self.assertRaises(ValueError):
+            propagate_scipy(g, np.array([[0, 0], [1, 1]]), np.array([1.0]), LAM)  # length mismatch
 
     def test_bucket_error_bounded_by_quantisation(self):
         for scale in (4, 16):
