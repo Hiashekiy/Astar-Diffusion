@@ -85,8 +85,14 @@ class GuidanceField:
     # ------------------------------------------------------------------ #
     def search(self, start, goal, alpha: float = 0.0, gamma: float = 1.0,
                adaptive: bool = False, alpha_far: float = 0.25, alpha_near: float = 0.75,
-               cutoff: int = 0) -> dict:
-        """Field-guided best-first search (needs :meth:`build` first unless alpha == 1)."""
+               distance: str | None = None, cutoff: int = 0) -> dict:
+        """Field-guided best-first search (needs :meth:`build` first unless alpha == 1).
+
+        ``distance`` overrides the model chosen in the constructor for this call only.
+        """
+        if distance is not None and distance not in DISTANCE_MODES:
+            raise ValueError(f"distance must be one of {DISTANCE_MODES}, got {distance!r}")
+        distance = self.distance if distance is None else distance
         if self.field is None and not (alpha >= 1.0 and not adaptive):
             raise RuntimeError("build() the guidance field first, or use astar()")
         for name, cell in (("start", start), ("goal", goal)):
@@ -97,7 +103,7 @@ class GuidanceField:
                 raise ValueError(f"{name} {tuple(cell)} is an obstacle")
         return _guided_search(self.grid, start, goal, self.field, alpha=alpha, gamma=gamma,
                               adaptive=adaptive, alpha_far=alpha_far, alpha_near=alpha_near,
-                              clip=self.clip, weight=self.weight, distance=self.distance,
+                              clip=self.clip, weight=self.weight, distance=distance,
                               cutoff=cutoff)
 
     def astar(self, start, goal, cutoff: int = 0) -> dict:
