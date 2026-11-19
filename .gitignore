@@ -1,8 +1,10 @@
-__pycache__/
+﻿__pycache__/
 *.pyc
-_scratch/
-_scratch2/
-*.log
-
-_dbg/
+*.egg-info/
+build/
+dist/
 outputs/
+.pytest_cache/
+*.log
+.venv/
+venv/

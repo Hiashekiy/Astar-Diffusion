@@ -15,10 +15,10 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from guidance_stage1.grid import Grid  # noqa: E402
-from guidance_stage2.config import FIELD_CLIP  # noqa: E402
-from guidance_stage3.normalize import normalize_distance, normalize_field, prepare_scalars  # noqa: E402
-from guidance_stage3.search import (  # noqa: E402
+from guidance_field.grid import Grid  # noqa: E402
+from guidance_field.config import FIELD_CLIP  # noqa: E402
+from guidance_field.normalize import normalize_distance, normalize_field, prepare_scalars  # noqa: E402
+from guidance_field.policies import (  # noqa: E402
     AdaptiveFusionPolicy,
     DistancePolicy,
     FieldOnlyPolicy,

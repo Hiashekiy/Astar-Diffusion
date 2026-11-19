@@ -22,7 +22,7 @@ import numpy as np
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import dijkstra
 
-from guidance_stage1.grid import Grid
+from .grid import Grid
 
 NEG_INF = -np.inf
 _CSR_CACHE = weakref.WeakKeyDictionary()  # auto-evicts when a Grid is collected

@@ -1,4 +1,4 @@
-"""Stage-2A trajectory generation: one collision-free reference plus graded collisions.
+"""trajectory generation: one collision-free reference plus graded collisions.
 
 Collision grades are assigned from the **measured** ``collision_ratio``, never from the
 name of the generator that produced the trajectory.  Every raw trajectory is a
@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import numpy as np
 
-from guidance_stage1.grid import Grid
-from guidance_stage1.paths import astar
-from guidance_stage2.collision import (
+from .grid import Grid
+from .paths import astar
+from .collision import (
     arc_lengths,
     detect_collision_intervals,
     measure_collision_ratio,
@@ -238,7 +238,7 @@ def _evaluate(grid: Grid, raw_path: np.ndarray, ref_length: float, cfg) -> dict:
 
 
 def _resample_arc(path: np.ndarray, n: int = 200) -> np.ndarray:
-    from guidance_stage2.collision import point_at_arc_length
+    from .collision import point_at_arc_length
 
     cum = arc_lengths(path)
     s = np.linspace(0.0, cum[-1], n)

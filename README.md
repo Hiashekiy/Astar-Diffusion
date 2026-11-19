@@ -1,272 +1,158 @@
-# Guidance Field — Stage 1, Stage 2A, Stage 3
+# guidance-field
 
-Two mechanism-validation stages for one idea: turn a trajectory into a 2-D obstacle-aware
-guidance field.
+Trajectory → obstacle-aware 2-D guidance field → guided grid search.
 
-- **Stage 1** — can a *feasible* trajectory become a field with global structure? Yes,
-  7/7 acceptance. Details: [`docs/stage1-report.md`](docs/stage1-report.md).
-- **Stage 2A** — can a *colliding* trajectory (local wall crossings, whole segments inside
-  obstacles) still yield a legal, continuous, directional field? Yes, 34/34 acceptance,
-  with a data-driven answer to "which repair method wins where".
-  Details: [`docs/stage2-report.md`](docs/stage2-report.md).
-- **Stage 3** — does that field actually help a graph search, beyond the goal distance?
-  13/13 acceptance, 1440 searches: expansion drops to 0.20x A* with a 4% longer path, but
-  *only* when the input trajectory is good. After accelerating field construction the whole
-  guided pipeline also beats A* end to end (2.9 ms vs 4.0 ms).
-  Details: [`docs/stage3-report.md`](docs/stage3-report.md).
+A diffusion/demonstration trajectory is turned into a **global potential field** over the
+map, and that field is then used as the priority of a best-first search. The library is
+self-contained: it generates its own maps, trajectories and fields, and never needs
+precomputed data.
 
-**No learning, no search, no diffusion in either stage.** Trajectories come from
-traditional graph search; search integration is stage 2B.
+```
+trajectory : (T,2) polyline  ->  sources (drop/project/bridge)  ->  F(x)  ->  best-first search
+```
 
-## Quick start
+---
+
+## Install
 
 ```bash
-pip install -r requirements.txt
-
-python scripts/run_stage1.py           # 20 maps x 4 grades x 3 weightings (~46 s)
-python scripts/check_acceptance.py     # stage-1 audit, 7 criteria
-python scripts/run_stage2.py           # 20 maps x 4 grades x 3 methods x 3 weights = 720 fields (~80 s)
-python scripts/check_stage2.py         # stage-2 audit, 34 criteria (A-E)
-python scripts/run_stage3.py           # 20 maps x 4 grades x 18 configurations = 1440 searches (~16 s)
-python scripts/check_stage3.py         # stage-3 audit, 13 criteria
-python scripts/benchmark_propagation.py  # heap vs vectorised vs bucket, 64/128/256
-python -m unittest discover -s tests   # 60 unit tests (~5 s)
+pip install -e .            # needs numpy, scipy, matplotlib only
 ```
 
-Flags: `--quick` (one map per family), `--no-figures`, `--outdir`, `--lam`, `--samples`.
+## Quick start (Python)
 
-## The mechanism
+```python
+from guidance_field import Config, build_case, build_weighted_field, prepare_scalars
+from guidance_field import astar_search, priority_search, FieldOnlyPolicy, LinearFusionPolicy
+from guidance_field.sources import build_all_methods
 
-For samples `s_i` at arc-length progress `u_i`, with strength `w(u_i)` and decay `lam`:
+cfg  = Config()                                    # 64x64, lambda=0.02, 64 sources
+case = build_case(0, "C", cfg.seed, cfg)           # one map + 4 graded trajectories
+grid, start, goal = case["grid"], case["start"], case["goal"]
 
+raw = case["trajectories"]["moderate_collision"]["raw_path"]   # a colliding demo
+src = build_all_methods(grid, raw, cfg)["M0"]                  # legal free-space sources
+field = build_weighted_field(grid, src, "linear", cfg.lam)["field"]
+
+sc = prepare_scalars(grid, field, "linear", goal)              # F_hat, d_hat
+for name, pol in (("A*", None),
+                  ("Field-Only", FieldOnlyPolicy(sc)),
+                  ("Linear Fusion", LinearFusionPolicy(sc, alpha=0.5))):
+    res = astar_search(grid, start, goal) if pol is None else priority_search(grid, start, goal, pol)
+    print(name, res["status"], res["expanded"], len(res["path"]))
 ```
-F(x) = max_i [ w(u_i) - lam * d_free(x, s_i) ]     d_free = obstacle-aware geodesic distance
+
+## Quick start (CLI)
+
+```bash
+guidance-field demo --out out/                 # generates a map, prints the comparison, writes 2 PNGs
+guidance-field experiment --maps 2 --out out/  # full study -> CSV + summary.json
+guidance-field field --map map.npy --trajectory traj.npy --out field.png
 ```
 
-Stage 1 builds it directly from a feasible trajectory. Stage 2A must first turn a raw
-*colliding* trajectory into legal free-space sources: obstacle cells never reach the
-propagator, and the stored trajectory is never silently repaired.
+`demo` on a 64x64 maze with a moderately colliding trajectory (measured, not illustrative):
+
+| method | status | expanded | path | ms | vs A\* |
+|---|---|---:|---:|---:|---:|
+| A\* (baseline) | success | 1105 | 146 | 2.78 | 1.00x |
+| Distance-GBFS | success | 416 | 150 | 0.56 | 0.38x |
+| Field-Only | success | 178 | 150 | 0.26 | 0.16x |
+| Linear Fusion alpha=0.5 | success | 241 | 146 | 0.37 | 0.22x |
 
 ---
 
-# Stage 1 — feasible trajectory -> field
+## The three layers
 
-20 maps (4 maze families x 5) · 80 trajectories graded by measured `rho = L/L*` ·
-Field-A/B/C = uniform / linear / quadratic weights.
+### 1. Field — `field.py`, `propagation.py`
 
-| verified | value |
+```
+F(x) = max_i [ w(u_i) - lam * d_free(x, s_i) ]
+```
+
+* `w(u)` is `uniform` (1), `linear` (u) or `quadratic` (u^2); `u` is each source's
+  **original** trajectory progress, never re-normalised.
+* `d_free` is the 4-connected geodesic distance; obstacles stay `NaN`, so the field never
+  leaks through walls.
+* `lam = 0.02`: the field is directional (it decays along the trajectory) but keeps its
+  structure across the map; the measured useful range is `lam * L ~ 1..4`.
+
+Four interchangeable propagators, `propagation.propagate(method=...)`:
+
+| method | algorithm | accuracy | when to use |
+|---|---|---|---|
+| `scipy` (default) | virtual super-source + `scipy.sparse.csgraph.dijkstra` on a cached CSR graph | exact (<= 4e-12) | any map, fastest |
+| `vectorized` | synchronous max-plus sweeps over the whole grid | exact (bit-identical) | wide/open maps, reference implementation |
+| `heap` | multi-source max-Dijkstra | exact | only when the dominant source is needed |
+| `bucket` | Dial queue on `C = min[d + (1-w)/lam]` | <= lam/(2*scale) | comparative baseline |
+
+Measured on the 20 reference maps: `scipy` 6.2 ms total vs `heap` 141.8 ms (**22.7x**) and
+vs `vectorized` 49.1 ms (7.9x). `vectorized` is 20x faster than the heap on open maps but up
+to 16x *slower* on long-corridor mazes, because it needs one sweep per unit of geodesic
+diameter. Numbers and methodology: `docs/results.md`.
+
+### 2. Sources — `sources.py`
+
+A demonstrated trajectory may pass through obstacles, which is not a legal source set.
+Three repairs, all keeping the original `u`:
+
+| id | rule |
 |---|---|
-| Field-A matches `1 - lam*d_free` | 5.7e-08 |
-| Field-B matches `max_i[w_i - lam*d_free]` | 5.9e-08 |
-| walls block propagation | corr with geodesic -1.000 vs -0.930 with straight line |
-| weighting adds direction | delta_F: **-0.001** (uniform) / **+0.985** (linear) / **+0.996** (quadratic) |
-| quality shows up in the field | corr(path divergence, field divergence) = **0.886** |
-| correct channel vs dead end | AUC **1.000**, pocket suppression 0.18-0.37 |
+| `M0` | delete samples inside obstacles, keep the rest |
+| `M1` | move each offending sample to the nearest legal cell within radius 3 |
+| `M2` | bridge each collision interval with a local A\* inside a ROI, keep inherited progress |
 
-Stage-1 outputs live in `outputs/guidance_field_stage1/`: `scenes/ paths/ fields/ figures/`
-plus `summary.json`, `acceptance.json`, `acceptance.txt`, `analysis/lambda_sensitivity.json`.
-Per scene: 4-panel figures per grade, `trajectories.png`, `comparison.png`, `owners.png`,
-`profiles.png`, plus `figures/scene_gallery.png` for all 20 maps.
+### 3. Search — `policies.py`
+
+| id | priority `J(n)` | uses the field |
+|---|---|---|
+| `B0_astar` | `g + h` | no (shortest-path baseline) |
+| `B1_distance_gbfs` | `d_hat_G` | no |
+| `B2_field_only` | `-F_hat` | yes |
+| `B3_linear_fusion` | `alpha*d_hat_G - (1-alpha)*F_hat` | yes |
+| `B4_nonlinear_fusion` | `alpha*d_hat_G^gamma - (1-alpha)*F_hat`, gamma=0.5 | yes |
+| `B5_adaptive_fusion` | `alpha(n)` from 0.25 far to 0.75 near | yes |
+
+`F_hat` uses the shared clip table `config.FIELD_CLIP`; `d_hat_G = d_G / D_max`. B1-B5 build
+their priority from **precomputed scalar maps only** — `g(n)` is never passed in, so they
+cannot silently degrade into A\*. Only B0 claims shortest-path optimality.
 
 ---
 
-# Stage 2A — colliding trajectory -> field
-
-## Maps: complex occupancy instead of carved corridors
-
-| family | generation | free fraction |
-|---|---|---|
-| A `random_clutter` | rect / rotated rect / ellipse / polygon / cross / L rasterised | 0.64-0.78 |
-| B `rooms_and_corridors` | BSP rooms + door openings in walls + furniture | 0.63-0.79 |
-| C `multi_branch_maze` | DFS skeleton + widened passages + loops + dead ends + rooms | 0.46-0.48 |
-| D `structured_topology` | U / C / L / comb + gate pairs + clusters + bottlenecks | 0.69-0.78 |
-
-Every map is validated (single free component, `d(S,G) >= 30`, per-family free-fraction
-band, enough obstacle structure, not one narrow corridor) and reproducible from its seed
-(re-checked by regenerating and comparing cell by cell).
-
-## Trajectories: graded by *measured* collision ratio
-
-| grade | band | measured | mean intervals |
-|---|---|---|---|
-| G0 `feasible` | 0 | 0.000 | 0.0 |
-| G1 `mild_collision` | 0.01-0.05 | 0.030 | 1.9 |
-| G2 `moderate_collision` | 0.05-0.15 | 0.100 | 3.5 |
-| G3 `severe_collision` | 0.15-0.30 | 0.223 | 6.0 |
-
-Generated by **shortcut** (primary), **Bezier** (supplement) and **directed crossing**
-(coverage), then selected by measured ratio — never by generator name. An anchor-gap
-ladder fills bands that random sampling leaves empty. `rho` is kept only as an auxiliary
-statistic: a wall-crossing shortcut is often *shorter* than the reference (rho down to 0.49).
-
-Collision detection is line-segment based (supercover traversal of every crossed cell), so
-a segment with two free endpoints still counts when it crosses a wall.
-
-## Three source-handling methods
-
-| | rule | sources (severe) | progress coverage |
-|---|---|---|---|
-| **M0** drop | discard obstacle samples, keep the original `u` | 49.9/64 | 0.796 |
-| **M1** project | snap to the nearest free cell (r <= 3), keep `u` | 63.4/64 | 0.992 |
-| **M2** bridge | local ROI A* per collision interval, inherits the interval's `u` range | 64/64 | 0.762 |
-
-M2's ROI escalation (margin 4 -> 8 -> 16 -> 32 -> full map): 166 bridges solved at margin
-4, only **4 of 223** needed the full map. No repaired geometry ever replaces the raw
-trajectory on disk.
-
-## Result: M2 is not universally better
-
-MAE against the field built from the collision-free reference (linear weights):
-
-| grade | M0 | M1 | M2 |
-|---|---|---|---|
-| mild | 0.031 | 0.031 | **0.024** |
-| moderate | 0.087 | 0.085 | **0.063** |
-| severe | 0.141 | 0.144 | **0.113** |
-
-Severe collisions, by map family:
-
-| family | M0 | M1 | M2 | reading |
-|---|---|---|---|---|
-| A open clutter | 0.057 | 0.057 | 0.057 | collisions barely matter |
-| B rooms | 0.270 | 0.275 | **0.164** | M2 clearly wins (-39%) |
-| C maze | **0.130** | 0.139 | 0.137 | M0 and M2 tie |
-| D structured | 0.107 | 0.106 | **0.094** | M2 slightly better |
-
-Weighting ablation (M2, severe): delta_F = 0.000 (uniform) / +0.954 (linear) / +0.988
-(quadratic); distinct owners 61.5 / 52.6 / 49.0 — quadratic trades structure for goal
-emphasis. The uniform field has the best channel AUC (0.840): it discriminates "near vs
-far from the trajectory" better, while weighting buys directionality. The two carry
-complementary information.
-
-## Stage-2A outputs
+## Project layout
 
 ```
-outputs/guidance_field_stage2/
-├── scenes/scene_XXX/{occupancy.npy, start_goal.npy, metadata.json}
-├── trajectories/scene_XXX/{reference_astar,feasible,mild_collision,
-│                            moderate_collision,severe_collision}.npy   float (N,2)
-│                          metadata.json        collision stats + intervals + generator + params
-├── sources/scene_XXX/<grade>/{M0,M1,M2}_sources.npz + bridge_metadata.json
-├── fields/scene_XXX/<grade>/{M0,M1,M2}_{uniform,linear,quadratic}.npy  (720 fields)
-├── figures/map_gallery.png, figures/scene_XXX/*.png, figures/summary/*.png
-├── analysis/{per_case_metrics.csv, aggregate_metrics.json}
-└── summary.json, acceptance.json, acceptance.txt
+src/guidance_field/
+    config.py        Config dataclass + all shared constants (one source of truth)
+    grid.py          occupancy grid, geodesic distance/components, geodesic balls
+    paths.py         A*, greedy best-first, resampling, path-quality grading
+    collision.py     supercover segment tracing, collision intervals, projection
+    scenes.py        four map families (A clutter, B rooms, C maze, D structured)
+    trajectories.py  shortcut / Bezier / directed trajectories, graded by measured collision
+    sources.py       M0 / M1 / M2 source handling
+    propagation.py   heap / vectorized / bucket / scipy backends + auto
+    field.py         weights and weighted multi-source field construction
+    normalize.py     F_hat and d_hat normalisation for the search layer
+    policies.py      B0-B5 priority policies, best-first loop, Dijkstra reference
+    metrics.py       source / field / channel metrics, aggregation, baseline comparison
+    experiment.py    build_case -> run_case -> run_study (CSV + summary.json + figures)
+    viz.py           compact plotting (black obstacles, labelled S/G, white halo paths)
+    cli.py           `guidance-field demo|experiment|field`
+tests/               56 unit + contract tests (stdlib unittest, no pytest needed)
+scripts/             propagation benchmark
+docs/results.md      measured evidence behind every number in this README
 ```
 
-Per scene: `trajectories.png`, `collision_intervals.png`, `source_methods.png`,
-`field_methods_linear.png` (rows raw/M0/M1/M2 x columns G0-G3),
-`M2_weight_ablation.png`, `field_difference.png` (method minus reference, the panel where
-the methods actually differ), `owners.png`, `progress_profiles.png`.
+## Conventions
 
----
+* Everything is stored `(row, col)`; matplotlib gets `(x, y) = (col, row)`.
+* Obstacles are drawn dark, free space light, `S` blue, `G` red, collision parts of a
+  trajectory red, bridges green.
+* Timings always report **field build** and **search** separately: a field rebuilt per query
+  can dominate the runtime, and hiding that would be misleading.
 
-# Stage 3 — guidance field into a search (B0–B5)
+## Testing
 
-Only the OPEN priority changes; fields, trajectories and collision detection are frozen.
-Inputs: M0 sources (obstacle samples dropped, original `u` kept), linear + quadratic fields.
-
-| id | method | priority J(n) |
-|---|---|---|
-| B0 | A* baseline | `g + h` |
-| B1 | Distance-GBFS | `d_hat` |
-| B2 | Field-Only | `-F_hat` |
-| B3 | Linear Fusion | `alpha*d_hat - (1-alpha)*F_hat` |
-| B4 | Nonlinear Fusion | `alpha*d_hat^gamma - (1-alpha)*F_hat`, gamma=0.5 |
-| B5 | Adaptive Fusion | alpha(n) 0.25 -> 0.75, gamma=0.5 |
-
-`F_hat` is normalised with the **shared** clip table (`FIELD_CLIP`, the same bounds the
-figures use); `d_hat = d_G / D_max` over free cells. B1–B5 cannot see `g` — the priority
-functions only receive precomputed scalar maps, which is checked by a test rather than
-trusted.
-
-## Result (20 maps x 4 grades = 1440 searches, 100% success, 100% valid paths)
-
-| method | expanded | search ms | **total ms** | L/L* |
-|---|---:|---:|---:|---:|
-| B0 A* | 1542 | 3.99 | **3.99** | 1.000 |
-| B1 Distance-GBFS | 488 | 0.70 | 0.70 | 1.141 |
-| B2 Field-Only linear | **336** | 0.53 | 7.07 | **1.031** |
-| B3 Linear Fusion linear | 368 | 0.59 | 7.13 | 1.053 |
-| B4 Nonlinear Fusion linear | 351 | 0.57 | 7.11 | 1.049 |
-| B5 Adaptive linear | 349 | 0.60 | 7.14 | 1.044 |
-
-Best expansion ratio: **0.204 x A\*** (B3, linear field, alpha=0.25) with only 4.2% longer paths.
-
-## Three findings worth keeping
-
-1. **The prior is worth what the trajectory is worth.** Field-Only expands 137 / 205 nodes
-   at G0 / G1 (vs 488 for distance-only greedy) but 459 / 544 at G2 / G3 — *worse* than the
-   distance heuristic once the trajectory is badly colliding. Fusion with alpha=0.25 still
-   recovers most of it.
-2. **alpha behaves exactly as risk R2 predicted**: 0.25 -> 0.50 -> 0.75 drives expansions
-   0.204 -> 0.222 -> 0.272 and path length 1.042 -> 1.045 -> 1.072, drifting toward
-   Distance-GBFS. The nonlinear term (gamma=0.5) only helps slightly at alpha >= 0.5.
-3. **Risk R5 was real, then got fixed**: with the stage-1 heap propagator the field cost
-   6.6 ms and the guided pipeline was 1.8x *slower* end to end than A*. Replacing it with a
-   numpy synchronous max-plus sweep (bit-identical result) plus two micro-optimisations cuts
-   the build to 2.3 ms, so the pipeline is now 2.89 ms vs A*'s 4.01 ms — 1.4x faster, still
-   with 5x fewer expansions. See [`docs/propagation-benchmark.md`](docs/propagation-benchmark.md).
-
-Nothing here claims shortest-path optimality: B1–B5 average `L/L* = 1.056` and hit `L*`
-exactly in 50.8% of cases.
-
----
-
-## Module map
-
-| file | role |
-|---|---|
-| `src/guidance_stage1/grid.py` | occupancy grid, 4-neighbour geodesics, components, cycle rank, `detour_profile`, geodesic balls |
-| `src/guidance_stage1/paths.py` | A* / weighted A* / greedy / waypoint search, arc-length resampling, teacher-free trajectory pool |
-| `src/guidance_stage1/fields.py` | **the propagation used by both stages** (`propagate`) |
-| `src/guidance_stage1/scenes.py`, `viz.py`, `pipeline.py`, `acceptance.py` | stage-1 maps, figures, orchestration, audit |
-| `src/guidance_stage2/collision.py` | continuous-trajectory vs grid collision geometry (supercover traversal, intervals, projection) |
-| `src/guidance_stage2/scenes.py` | the four stage-2 map families + validation |
-| `src/guidance_stage2/trajectories.py` | reference A*, shortcut/Bezier/directed candidates, band selection by measured ratio |
-| `src/guidance_stage2/source_methods.py` | M0 drop / M1 project / M2 local bridging, progress inheritance |
-| `src/guidance_stage2/fields.py`, `metrics.py` | fields from legal sources, all indicators |
-| `src/guidance_stage2/visualization.py`, `pipeline.py`, `acceptance.py` | figures, orchestration, audit |
-| `src/guidance_stage2/propagation.py` | three interchangeable propagators (heap / numpy synchronous / bucket) + `auto` |
-| `src/guidance_stage3/search.py` | A* baseline, the B1–B5 priority policies, generic best-first loop, Dijkstra for L* |
-| `src/guidance_stage3/normalize.py` | `F_hat` (shared clip table) and `d_hat` normalisation |
-| `src/guidance_stage3/pipeline.py` | timed field rebuild + all 18 configurations per (map, grade) |
-| `src/guidance_stage3/visualization.py`, `metrics.py`, `acceptance.py` | expansion overlays, summaries, audit |
-
-## Design decisions worth knowing
-
-- **Progress is never renormalised.** `u` is always the arc-length fraction along the
-  *raw* trajectory, so a dropped collision interval leaves a real hole in the u axis.
-- **Collision is a segment property, not a point property.** Two free samples can hide a
-  wall crossing; the traversal reports every crossed cell with its parameter interval.
-- **M2 is local by construction.** Bridges are anchored at the free entry/exit cells of a
-  specific collision interval; the check for "not a global replan" is that bridge count
-  equals interval count and the support path still keeps the original free segments.
-- **Geodesic balls** for start/goal region statistics (a Euclidean disk reaches across walls).
-- **Display ranges are per weighting and clipped**: far from the trajectory every field
-  decays to a large negative number, and letting that tail set the colour scale hides the
-  0->1 ramp. Raw extremes stay in the data.
-- **`lam` scale**: the useful regime is `lam * L ~ 1..4`; below it the strongest single
-  source floods the map, above it the field collapses towards nearest-source distance.
-
-## Known limits
-
-1. Grid metric only: 4-neighbour geodesics, no anisotropic or continuous-space field.
-2. Trajectory "quality" in stage 1 is purely length-based; clearance and smoothness are
-   not modelled.
-3. Stage-2 collision bands stop at 30%: heavier corruption (a trajectory that is mostly
-   inside obstacles) is out of scope here.
-4. M2's spatial-uniform resampling costs progress coverage (0.762 vs 0.992 for M1) — a
-   real trade-off, not hidden in the statistics.
-5. Pixel content of figures is not machine-checked; acceptance verifies the underlying
-   data and that the files exist.
-
-## What is still open
-
-- **Amortise the field.** Every end-to-end loss comes from building the field per query;
-  caching or precomputing it is the obvious next experiment.
-- **Scale.** 64x64 only. Whether the expansion advantage survives larger maps (where A*'s
-  heuristic is relatively worse) is untested.
-- **Adaptive fusion (B5)** was run with one fixed parameter set only; it did not beat the
-  best fixed alpha and should not enter a main experiment until tuned.
-- **No diagonal motion, no focal search, no learned prior** — all deliberately out of scope.
+```bash
+python -m unittest discover -s tests      # 56 tests, ~6 s
+python scripts/benchmark_propagation.py   # propagator benchmark at 64/128/256
+```

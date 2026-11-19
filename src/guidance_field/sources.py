@@ -18,9 +18,9 @@ from __future__ import annotations
 
 import numpy as np
 
-from guidance_stage1.grid import Grid
-from guidance_stage1.paths import astar
-from guidance_stage2.collision import (
+from .grid import Grid
+from .paths import astar
+from .collision import (
     arc_lengths,
     cell_of,
     detect_collision_intervals,

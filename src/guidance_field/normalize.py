@@ -9,16 +9,11 @@ from __future__ import annotations
 
 import numpy as np
 
-from guidance_stage1.grid import Grid
-from guidance_stage2.config import FIELD_CLIP
+from .grid import Grid
+from .config import FIELD_CLIP, field_clip_bounds
 
 EPS = 1e-12
 
-
-def field_clip_bounds(weight: str) -> tuple[float, float]:
-    if weight not in FIELD_CLIP:
-        raise KeyError(f"no clip bounds configured for weight {weight!r}")
-    return FIELD_CLIP[weight]
 
 
 def normalize_field(field: np.ndarray, weight: str) -> np.ndarray:

@@ -17,7 +17,7 @@ import math
 
 import numpy as np
 
-from guidance_stage1.grid import Grid
+from .grid import Grid
 
 EPS = 1e-9
 INF = float("inf")

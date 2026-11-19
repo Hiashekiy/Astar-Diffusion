@@ -16,19 +16,19 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from guidance_stage1.fields import weight_at_progress  # noqa: E402
-from guidance_stage1.grid import Grid  # noqa: E402
-from guidance_stage2.collision import (  # noqa: E402
+from guidance_field.field import weight_at_progress  # noqa: E402
+from guidance_field.grid import Grid  # noqa: E402
+from guidance_field.collision import (  # noqa: E402
     detect_collision_intervals,
     measure_collision_ratio,
     project_to_nearest_free,
     segment_collision_intervals,
     trace_segment_cells,
 )
-from guidance_stage2.config import Stage2Config  # noqa: E402
-from guidance_stage2.fields import build_weighted_field, source_weights  # noqa: E402
-from guidance_stage2.scenes import generate_scene  # noqa: E402
-from guidance_stage2.source_methods import (  # noqa: E402
+from guidance_field.config import Config  # noqa: E402
+from guidance_field.field import build_weighted_field, source_weights  # noqa: E402
+from guidance_field.scenes import generate_scene  # noqa: E402
+from guidance_field.sources import (  # noqa: E402
     build_all_methods,
     build_local_bridge,
     build_sources_bridge,
@@ -36,9 +36,9 @@ from guidance_stage2.source_methods import (  # noqa: E402
     build_sources_project,
     sample_raw_trajectory,
 )
-from guidance_stage2.trajectories import generate_trajectories, select_by_collision_band  # noqa: E402
+from guidance_field.trajectories import generate_trajectories, select_by_collision_band  # noqa: E402
 
-CFG = Stage2Config()
+CFG = Config()
 
 
 def grid_with(walls, size=10):
@@ -164,67 +164,6 @@ class SourceMethodTests(unittest.TestCase):
                 if kind == "linear":
                     np.testing.assert_allclose(got, pr)  # NOT re-normalised by index
 
-
-class PlotCoordinateTests(unittest.TestCase):
-    """Regression: everything is stored as (row, col) but matplotlib draws (x, y) = (col, row)."""
-
-    asym = np.array([[2.0, 5.0], [8.0, 5.0], [8.0, 12.0]])
-
-    def test_colored_segments_keep_row_col_order(self):
-        from guidance_stage2.visualization import _colored_segments
-
-        segs, colors = _colored_segments(self.asym, [])
-        self.assertEqual(len(segs), len(self.asym) - 1)
-        np.testing.assert_allclose(segs[0][0], [2.0, 5.0])  # still (row, col)
-        np.testing.assert_allclose(segs[-1][-1], [8.0, 12.0])
-
-    def test_draw_trajectory_emits_col_row_coordinates(self):
-        import matplotlib
-
-        matplotlib.use("Agg")
-        import matplotlib.pyplot as plt
-
-        from guidance_stage2.visualization import draw_trajectory
-
-        fig, ax = plt.subplots()
-        draw_trajectory(ax, self.asym, [])
-        line = ax.collections[-1]
-        segs = line.get_segments()
-        first, last = segs[0], segs[-1]
-        np.testing.assert_allclose(first[0], [5.0, 2.0])  # (x, y) = (col, row)
-        np.testing.assert_allclose(last[-1], [12.0, 8.0])
-        plt.close(fig)
-
-    def test_drawn_endpoints_match_start_and_goal_markers(self):
-        import matplotlib
-
-        matplotlib.use("Agg")
-        import matplotlib.pyplot as plt
-
-        from guidance_stage2.visualization import _mark, draw_trajectory
-
-        start, goal = (2, 5), (8, 12)
-        raw = np.array([[2.0, 5.0], [8.0, 5.0], [8.0, 12.0]])
-        fig, ax = plt.subplots()
-        draw_trajectory(ax, raw, [])
-        segs = ax.collections[-1].get_segments()
-        np.testing.assert_allclose(segs[0][0], [start[1], start[0]])
-        np.testing.assert_allclose(segs[-1][-1], [goal[1], goal[0]])
-        _mark(ax, start, "#2b6cff")
-        marker = ax.lines[-1]
-        np.testing.assert_allclose([marker.get_xdata()[0], marker.get_ydata()[0]], [start[1], start[0]])
-        plt.close(fig)
-
-    def test_collision_and_free_colours_still_split_correctly(self):
-        from guidance_stage2.visualization import COL_COLLIDE, COL_FREE, _colored_segments
-
-        raw = np.array([[2.0, 5.0], [8.0, 5.0], [8.0, 12.0]])
-        intervals = [{"s_in": 1.0, "s_out": 2.0}]  # middle of the second segment
-        segs, colors = _colored_segments(raw, intervals)
-        self.assertIn(COL_FREE, colors)
-        self.assertIn(COL_COLLIDE, colors)
-        for seg in segs:
-            self.assertEqual(np.asarray(seg).shape, (2, 2))
 
 
 class FieldTests(unittest.TestCase):

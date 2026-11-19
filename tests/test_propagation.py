@@ -11,9 +11,9 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from guidance_stage1.fields import propagate as propagate_stage1  # noqa: E402
-from guidance_stage1.grid import Grid  # noqa: E402
-from guidance_stage2.propagation import (  # noqa: E402
+from guidance_field.propagation import propagate_heap as propagate_reference  # noqa: E402
+from guidance_field.grid import Grid  # noqa: E402
+from guidance_field.propagation import (  # noqa: E402
     propagate,
     propagate_auto,
     propagate_bucket,
@@ -38,7 +38,7 @@ def sources_on_path(grid: Grid, n=16):
     a = free[int(rng.integers(len(free)))]
     dist = grid.geodesic_distance([grid.idx(*a)])
     b = grid.rc(int(np.argmax(np.where(dist > 0, dist, -1))))
-    from guidance_stage1.paths import astar
+    from guidance_field.paths import astar
 
     nodes = astar(grid, grid.idx(*a), grid.idx(*b))
     pts = np.array([grid.rc(int(i)) for i in nodes], dtype=float)
@@ -59,7 +59,7 @@ class PropagationEquivalence(unittest.TestCase):
     def test_heap_matches_stage1_reference(self):
         for g in self.grids:
             samples, w = sources_on_path(g)
-            ref, ref_owner = propagate_stage1(g, samples, w, LAM)
+            ref, ref_owner = propagate_reference(g, samples, w, LAM, return_owner=True)
             out, owner = propagate_heap(g, samples, w, LAM, return_owner=True)
             ok = g.free & np.isfinite(ref) & np.isfinite(out)
             self.assertLess(float(np.max(np.abs(ref[ok] - out[ok]))), 1e-12)
@@ -68,7 +68,7 @@ class PropagationEquivalence(unittest.TestCase):
     def test_vectorized_is_bit_exact(self):
         for g in self.grids:
             samples, w = sources_on_path(g)
-            ref = propagate_stage1(g, samples, w, LAM)[0]
+            ref = propagate_reference(g, samples, w, LAM)
             out = propagate_vectorized(g, samples, w, LAM)
             ok = g.free & np.isfinite(ref) & np.isfinite(out)
             self.assertLess(float(np.max(np.abs(ref[ok] - out[ok]))), 1e-12)
@@ -103,7 +103,7 @@ class PropagationEquivalence(unittest.TestCase):
         for scale in (4, 16):
             for g in self.grids:
                 samples, w = sources_on_path(g)
-                ref = propagate_stage1(g, samples, w, LAM)[0]
+                ref = propagate_reference(g, samples, w, LAM)
                 out = propagate_bucket(g, samples, w, LAM, scale=scale)
                 ok = g.free & np.isfinite(ref) & np.isfinite(out)
                 self.assertLess(float(np.max(np.abs(ref[ok] - out[ok]))), LAM / (2 * scale) + 1e-12)
@@ -138,7 +138,7 @@ class PropagationEquivalence(unittest.TestCase):
     def test_auto_picks_a_correct_implementation(self):
         for g in self.grids:
             samples, w = sources_on_path(g)
-            ref = propagate_stage1(g, samples, w, LAM)[0]
+            ref = propagate_reference(g, samples, w, LAM)
             out = propagate_auto(g, samples, w, LAM)
             ok = g.free & np.isfinite(ref) & np.isfinite(out)
             self.assertLess(float(np.max(np.abs(ref[ok] - out[ok]))), 1e-12)

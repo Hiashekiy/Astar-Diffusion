@@ -13,7 +13,7 @@ import time
 
 import numpy as np
 
-from guidance_stage1.grid import Grid
+from .grid import Grid
 
 NEIGHBOURS = ((-1, 0), (1, 0), (0, -1), (0, 1))  # fixed traversal order (reproducible)
 INF = float("inf")

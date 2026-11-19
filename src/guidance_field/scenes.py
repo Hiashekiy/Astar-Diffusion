@@ -1,4 +1,4 @@
-"""Stage-2A map families: complex occupancy environments instead of carved corridors.
+"""map families: complex occupancy environments instead of carved corridors.
 
 A: random clutter of mixed-shape obstacles   (rect / rotated rect / ellipse / polygon /
                                               cross / L)
@@ -11,8 +11,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from guidance_stage1.grid import Grid
-from guidance_stage2.config import FREE_FRACTION_BANDS, MAP_TYPE_NAMES
+from .grid import Grid
+from .config import FREE_FRACTION_BANDS, MAP_TYPE_NAMES
 
 FREE = 0
 OCC = 1
