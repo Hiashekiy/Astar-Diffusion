@@ -96,3 +96,33 @@ python -m unittest tests.test_propagation -v                # 9 项等价性/边
 ```
 
 产物：`outputs/benchmark_propagation/{results.csv, summary.json, benchmark.png}`
+
+
+## 8. Maze-safe exact backend (branch: fix/maze-safe-propagation)
+
+A fourth implementation, `propagate_scipy`, has been added to address the long-corridor/maze degeneration of synchronous full-grid relaxation.
+
+It converts the weighted max field to a shortest-path problem using
+`w_max = max_i(w_i)`:
+
+```
+C(x) = min_i [ d_free(x, s_i) + (w_max - w_i) / lambda ]
+F(x) = w_max - lambda * C(x)
+```
+
+A virtual super-source connects to each unique seed cell with edge cost
+`(w_max - w_i) / lambda + 1`. The common +1 avoids zero-weight source edges and is
+subtracted when reconstructing F; it does not change which source/path is optimal.
+The free-space grid adjacency is represented as a CSR sparse matrix and cached per Grid
+instance. SciPy's compiled `csgraph.dijkstra` performs the solve. This is exact up to
+floating-point roundoff; it does not quantize source weights.
+
+The branch changes `propagate_auto` to use this compiled sparse backend for field-only
+queries, and retains the heap implementation when `return_owner=True`. The vectorized
+and bucket implementations remain available for controlled benchmarks.
+
+**Important:** the timing tables above were produced before this backend was added and
+must not be presented as measurements of the new `auto` policy. Re-run
+`scripts/benchmark_propagation.py` on the target machine and on the Stage 2A maps before
+updating the paper's runtime claims. The new backend also requires the already-declared
+`scipy>=1.10` dependency.
