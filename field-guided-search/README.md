@@ -1,12 +1,12 @@
-# guidance-field-core
+# field-guided-search
 
 独立最小包：**占用栅格地图 + 一条引导路径（可以穿墙）→ 全局引导场 `F(x)` → 在该场上的路径搜索结果**。
 
 只依赖 `numpy`（`scipy` 可选，装了场构建快 20 倍以上）。复制整个目录即可独立使用：
-`pip install -e .`，或直接把 `src/guidance_field` 放进你项目的 `sys.path`。
+`pip install -e .`，或直接把 `src/field_guided_search` 放进你项目的 `sys.path`。
 
 ```python
-from guidance_field import GuidanceField
+from field_guided_search import GuidanceField
 
 gf    = GuidanceField(occupancy)      # (H, W)，0 = 自由
 field = gf.build(trajectory)          # (N, 2) 折线，[row, col]；允许穿过障碍
@@ -33,7 +33,7 @@ pip install -e ".[fast]"      # 加 scipy：场构建快 20 倍以上（推荐�
 
 ```python
 import numpy as np
-from guidance_field import GuidanceField
+from field_guided_search import GuidanceField
 
 occ = np.zeros((64, 64), np.int8)          # 0 = 自由，1 = 障碍
 occ[0, :] = occ[-1, :] = 1
@@ -91,9 +91,9 @@ J(n) = alpha(n) · d̂_G(n)^gamma − (1 − alpha(n)) · F̂(n)
 ### 一次性函数
 
 ```python
-from guidance_field import build_guidance_field, guided_search
+from field_guided_search import field_from_trajectory, guided_search
 
-field = build_guidance_field(occ, trajectory, lam=0.02, weight="linear")
+field = field_from_trajectory(occ, trajectory, lam=0.02, weight="linear")
 res   = guided_search(occ, start, goal, field=field, alpha=0.5)
 res   = guided_search(occ, start, goal, trajectory=trajectory, alpha=0.5)
 ```
@@ -126,7 +126,7 @@ python -m unittest discover -s tests      # 19 项
 ## 文件
 
 ```
-src/guidance_field/
+src/field_guided_search/
     __init__.py   公开 API
     api.py        GuidanceField + 一次性函数
     grid.py       占用栅格、四邻域表、BFS 距离

@@ -1,22 +1,22 @@
-"""guidance-field: map + guidance path -> obstacle-aware field -> guided grid search.
+"""field-guided-search: map + guidance path -> obstacle-aware field -> guided grid search.
 
 Minimal core, six modules, one required dependency (numpy; scipy optional):
 
-    from guidance_field import GuidanceField
+    from field_guided_search import GuidanceField
 
     gf = GuidanceField(occupancy)        # (H, W), 0 = free
     field = gf.build(trajectory)         # (N, 2) as [row, col]; may cross obstacles
     res = gf.search(start, goal)         # field-only; alpha=0.5 fuses the goal distance
     res["path"], res["length"], res["expanded"], res["status"]
 
-Convenience functions: :func:`build_guidance_field`, :func:`guided_search`.
+Convenience functions: :func:`field_from_trajectory`, :func:`guided_search`.
 """
 
 from __future__ import annotations
 
 __version__ = "1.0.0"
 
-from .api import GuidanceField, build_guidance_field, guided_search
+from .api import GuidanceField, field_from_trajectory, guided_search
 from .field import (
     DEFAULT_LAM,
     WEIGHTS,
@@ -40,7 +40,7 @@ from .sources import resample_polyline, trajectory_sources
 __all__ = [
     "__version__",
     # high level
-    "GuidanceField", "build_guidance_field", "guided_search",
+    "GuidanceField", "field_from_trajectory", "guided_search",
     # building blocks
     "Grid", "resample_polyline", "trajectory_sources",
     "build_field", "propagate", "propagate_scipy", "propagate_heap",

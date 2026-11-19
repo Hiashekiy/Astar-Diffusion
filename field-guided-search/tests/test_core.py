@@ -8,12 +8,12 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from guidance_field import (
+from field_guided_search import (
     Grid,
     GuidanceField,
     astar,
     build_field,
-    build_guidance_field,
+    field_from_trajectory,
     guided_search,
     path_is_valid,
     propagate_heap,
@@ -166,7 +166,7 @@ class ApiTests(unittest.TestCase):
         occ = border_room(h=20, w=20, walls=[(8, c) for c in range(1, 16)])
         traj = np.array([[3.0, 3.0], [3.0, 16.0], [16.0, 16.0]])
         grid = Grid(occ)
-        field = build_guidance_field(occ, traj, num_samples=32)
+        field = field_from_trajectory(occ, traj, num_samples=32)
         res = guided_search(occ, (3, 3), (16, 16), field=field)
         self.assertEqual(res["status"], "success")
         self.assertTrue(path_is_valid(grid, res["path"], (3, 3), (16, 16))["valid"])

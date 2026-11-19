@@ -1,6 +1,6 @@
 """Public API: map + guidance path -> guidance field -> guided search.
 
-    from guidance_field import GuidanceField
+    from field_guided_search import GuidanceField
 
     gfield = GuidanceField(occupancy)          # occupancy: (H, W) with 0 = free
     field  = gfield.build(trajectory)          # trajectory: (N, 2) as [row, col]
@@ -8,7 +8,7 @@
     result["path"], result["expanded"], result["length"], result["status"]
 
 ``GuidanceField`` is a thin state holder; the same work is available as two functions:
-:func:`build_guidance_field` and :func:`guided_search`.
+:func:`field_from_trajectory` and :func:`guided_search`.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from .sources import trajectory_sources
 
 
 class GuidanceField:
-    """Turns one occupancy map into a reusable guidance-field builder + searcher."""
+    """Turns one occupancy map into a reusable field-guided-search builder + searcher."""
 
     def __init__(self, occupancy, lam: float = DEFAULT_LAM, weight: str = "linear",
                  num_samples: int = 64, source_method: str = "project",
@@ -91,7 +91,7 @@ class GuidanceField:
 # --------------------------------------------------------------------------- #
 # functional shortcuts
 # --------------------------------------------------------------------------- #
-def build_guidance_field(occupancy, trajectory, num_samples: int = 64, **kwargs) -> np.ndarray:
+def field_from_trajectory(occupancy, trajectory, num_samples: int = 64, **kwargs) -> np.ndarray:
     """One call: map + guidance path -> field ``(H, W)`` (NaN on obstacles)."""
     gfield = GuidanceField(occupancy, **_field_kwargs(kwargs))
     return gfield.build(trajectory, num_samples=num_samples)

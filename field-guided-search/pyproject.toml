@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "guidance-field-core"
+name = "field-guided-search"
 version = "1.0.0"
 description = "Minimal core: map + guidance path -> guidance field -> guided grid search."
 readme = "README.md"
