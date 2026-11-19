@@ -1,7 +1,9 @@
-# guidance-field
+# guidance-field-core
 
-**输入**：占用栅格地图 + 一条引导路径（可以穿墙）
-**输出**：全局引导场 `F(x)` + 在该场上的路径搜索结果
+独立最小包：**占用栅格地图 + 一条引导路径（可以穿墙）→ 全局引导场 `F(x)` → 在该场上的路径搜索结果**。
+
+只依赖 `numpy`（`scipy` 可选，装了场构建快 20 倍以上）。复制整个目录即可独立使用：
+`pip install -e .`，或直接把 `src/guidance_field` 放进你项目的 `sys.path`。
 
 ```python
 from guidance_field import GuidanceField

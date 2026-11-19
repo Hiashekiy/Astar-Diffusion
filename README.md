@@ -18,9 +18,10 @@ trajectory : (T,2) polyline  ->  sources (drop/project/bridge)  ->  F(x)  ->  be
 | path | contents | when |
 |---|---|---|
 | repository root | full library: scenarios, trajectory generation, source repair (M0/M1/M2), metrics, experiment runner, figures, CLI | reproducing the study, exploring map families |
-| `core/` | 5-module minimal implementation: `GuidanceField(occupancy).build(trajectory).search(start, goal)` | dropping the field+search into another project |
+| `guidance-field-core/` | 5-module minimal implementation: `GuidanceField(occupancy).build(trajectory).search(start, goal)` | dropping the field+search into another project |
 
-`core/` is a standalone distribution (`guidance-field-core`, `core/README.md`). Both expose the
+`guidance-field-core/` is a standalone distribution (`guidance-field-core`, with its own
+README and pyproject). Both expose the
 module name `guidance_field`, so `pip install` only one of them at a time.
 
 ## Install
