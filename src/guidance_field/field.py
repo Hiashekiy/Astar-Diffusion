@@ -1,142 +1,89 @@
-"""Guidance-field construction.
+"""Guidance-field construction: source weights and weighted multi-source propagation.
 
     F(x) = max_i [ w(u_i) - lam * d_free(x, s_i) ]
 
-``d_free`` is the 4-connected geodesic distance, so the field never leaks through walls and
-obstacle cells stay NaN. Two exact backends:
+Weights come from each source's **original** trajectory progress ``u``; when obstacle
+samples are dropped or bridged the remaining ``u`` values are never re-normalised, so a
+collision interval leaves a genuine hole in the progress axis.
 
-* ``scipy`` -- one sparse Dijkstra from a virtual super-source (fast; default when available)
-* ``heap``  -- multi-source max-Dijkstra in pure Python (fallback, no extra dependency)
+The propagation backends live in :mod:`guidance_field.propagation`; ``scipy`` (sparse
+Dijkstra) is the default because it is exact and 20x+ faster than a Python heap here.
 """
 
 from __future__ import annotations
 
-import heapq
-import weakref
-
 import numpy as np
 
+from .config import FIELD_CLIP, WEIGHT_KINDS, field_clip_bounds
 from .grid import Grid
-
-try:  # scipy is optional
-    from scipy.sparse import csr_matrix
-    from scipy.sparse.csgraph import dijkstra as _sparse_dijkstra
-
-    _HAVE_SCIPY = True
-except ImportError:  # pragma: no cover - only without scipy
-    _HAVE_SCIPY = False
-
-WEIGHTS = ("uniform", "linear", "quadratic")
-DEFAULT_LAM = 0.02
-NEG_INF = -np.inf
-
-_CSR_CACHE = weakref.WeakKeyDictionary()
+from .propagation import PROPAGATORS, propagate as propagate_field
 
 
-def weight_at_progress(u, kind: str = "linear") -> np.ndarray:
-    """w(u): 1 for uniform, u for linear, u^2 for quadratic."""
+def sample_progress(m: int) -> np.ndarray:
+    """Normalised trajectory progress u_i = i / (M-1)."""
+    return np.linspace(0.0, 1.0, m)
+
+
+def weight_at_progress(u, kind: str) -> np.ndarray:
+    """Continuous weight function w(u)."""
     u = np.asarray(u, dtype=np.float64)
     if kind == "uniform":
         return np.ones_like(u)
     if kind == "linear":
         return u.copy()
     if kind == "quadratic":
-        return u * u
-    raise ValueError(f"unknown weight {kind!r}, expected one of {WEIGHTS}")
+        return u**2
+    raise ValueError(f"unknown weight kind {kind!r}, expected one of {WEIGHT_KINDS}")
 
 
-# --------------------------------------------------------------------------- #
-# backends
-# --------------------------------------------------------------------------- #
-def _csr(grid: Grid):
-    """Cached unit-weight CSR adjacency matrix of the free cells."""
-    graph = _CSR_CACHE.get(grid)
-    if graph is not None:
-        return graph
-    nbr = grid._nbr
-    valid = nbr >= 0
-    indptr = np.zeros(grid.size + 1, dtype=np.int64)
-    np.cumsum(valid.sum(axis=1), out=indptr[1:])
-    indices = nbr[valid].astype(np.int32)
-    data = np.ones(len(indices), dtype=np.float64)
-    graph = csr_matrix((data, indices, indptr), shape=(grid.size, grid.size))
-    _CSR_CACHE[grid] = graph
-    return graph
+def source_weights(progress, kind: str) -> np.ndarray:
+    """Weights from the sources' stored original progress (no re-normalisation)."""
+    return np.asarray(weight_at_progress(np.asarray(progress, dtype=np.float64), kind), dtype=np.float64)
 
 
-def propagate_scipy(grid: Grid, positions, weights, lam: float = DEFAULT_LAM) -> np.ndarray:
-    """Exact: minimise ``C(x) = min_i [d + (w_max - w_i)/lam]`` with a virtual super-source."""
-    if not _HAVE_SCIPY:  # pragma: no cover
-        raise RuntimeError("scipy is not installed; use method='heap'")
-    pos = np.asarray(positions, dtype=int).reshape(-1, 2)
-    w = np.asarray(weights, dtype=np.float64).reshape(-1)
-    flat = np.full(grid.size, np.nan, dtype=np.float64)
-    if len(pos) == 0:
-        return flat.reshape(grid.height, grid.width)
-    graph = _csr(grid)
-    w_max = float(w.max())
-    ids = pos[:, 0] * grid.width + pos[:, 1]
-    unique_ids, inverse = np.unique(ids, return_inverse=True)
-    per_cell = np.full(len(unique_ids), NEG_INF, dtype=np.float64)
-    np.maximum.at(per_cell, inverse, w)          # several samples may share one cell
-    offsets = (w_max - per_cell) / lam + 1.0     # +1 keeps every sparse edge strictly positive
-    n = grid.size
-    indptr = np.concatenate((graph.indptr.astype(np.int64, copy=False),
-                             np.array([graph.nnz + len(unique_ids)], dtype=np.int64)))
-    indices = np.concatenate((graph.indices.astype(np.int32, copy=False),
-                              unique_ids.astype(np.int32)))
-    data = np.concatenate((graph.data, offsets))
-    augmented = csr_matrix((data, indices, indptr), shape=(n + 1, n + 1))
-    dist = _sparse_dijkstra(augmented, directed=True, indices=n)[:n]
-    values = w_max - lam * (dist - 1.0)
-    reached = grid.free.ravel() & np.isfinite(dist)
-    flat[reached] = values[reached]
-    return flat.reshape(grid.height, grid.width)
+def build_weighted_field(grid: Grid, sources: dict, kind: str, lam: float,
+                         method: str = "scipy") -> dict:
+    """One field for one (source set, weighting) pair.
+
+    ``sources`` needs ``positions_rc`` (K, 2) and ``progress`` (K,).  ``method`` selects the
+    propagator; the ``heap`` backend is used automatically when the dominant source is
+    requested, because the sparse backends do not track ownership.
+    """
+    positions = np.asarray(sources["positions_rc"], dtype=int).reshape(-1, 2)
+    progress = np.asarray(sources["progress"], dtype=np.float64).reshape(-1)
+    if len(positions) == 0:
+        return {
+            "field": np.full((grid.height, grid.width), np.nan, dtype=np.float64),
+            "owner": np.full((grid.height, grid.width), -1, dtype=np.int32),
+            "weights": np.zeros(0),
+            "num_sources": 0,
+            "empty": True,
+        }
+    weights = source_weights(progress, kind)
+    field, owner = propagate_field(grid, positions, weights, lam, method=method, return_owner=True)
+    return {
+        "field": np.asarray(field, dtype=np.float64),
+        "owner": owner,
+        "weights": weights,
+        "num_sources": int(len(positions)),
+        "empty": False,
+    }
 
 
-def propagate_heap(grid: Grid, positions, weights, lam: float = DEFAULT_LAM) -> np.ndarray:
-    """Exact fallback: multi-source max-Dijkstra."""
-    pos = np.asarray(positions, dtype=int).reshape(-1, 2)
-    w = np.asarray(weights, dtype=np.float64).reshape(-1)
-    field = np.full(grid.size, NEG_INF, dtype=np.float64)
-    seeded = set()
-    for (r, c), wi in zip(pos, w):
-        v = grid.idx(int(r), int(c))
-        if float(wi) > field[v]:
-            field[v] = float(wi)
-        seeded.add(v)
-    # heapify only after every seed reached its final weight: a cell shared by several
-    # samples must be expanded with the strongest one, never with the first one seen
-    heap = [(-field[v], v) for v in seeded]
-    heapq.heapify(heap)
-    nbr = grid._nbr
-    while heap:
-        neg, v = heapq.heappop(heap)
-        value = -neg
-        if value < field[v]:
-            continue
-        candidate = value - lam
-        for u in nbr[v]:
-            if u >= 0 and candidate > field[u]:
-                field[u] = candidate
-                heapq.heappush(heap, (-candidate, u))
-    out = np.where(grid.free.ravel() & (field > NEG_INF), field, np.nan)
-    return out.reshape(grid.height, grid.width)
+def build_all_weight_variants(grid: Grid, sources: dict, lam: float,
+                              method: str = "scipy") -> dict[str, dict]:
+    """uniform / linear / quadratic fields for the same source set."""
+    return {kind: build_weighted_field(grid, sources, kind, lam, method=method) for kind in WEIGHT_KINDS}
 
 
-def propagate(grid: Grid, positions, weights, lam: float = DEFAULT_LAM,
-              method: str = "auto") -> np.ndarray:
-    """Field from explicit sources and weights."""
-    if method == "auto":
-        method = "scipy" if _HAVE_SCIPY else "heap"
-    if method == "scipy":
-        return propagate_scipy(grid, positions, weights, lam)
-    if method == "heap":
-        return propagate_heap(grid, positions, weights, lam)
-    raise ValueError(f"unknown method {method!r}, expected auto|scipy|heap")
-
-
-def build_field(grid: Grid, positions, progress, lam: float = DEFAULT_LAM,
-                weight: str = "linear", method: str = "auto") -> np.ndarray:
-    """Field for sources given as ``(row, col)`` cells plus their trajectory progress ``u``."""
-    return propagate(grid, positions, weight_at_progress(progress, weight), lam, method)
+__all__ = [
+    "FIELD_CLIP",
+    "PROPAGATORS",
+    "build_all_weight_variants",
+    "build_weighted_field",
+    "field_clip_bounds",
+    "propagate_field",
+    "sample_progress",
+    "source_weights",
+    "weight_at_progress",
+]
