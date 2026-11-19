@@ -17,7 +17,14 @@ import numpy as np
 
 from .field import DEFAULT_LAM, WEIGHTS, build_field, propagate
 from .grid import Grid
-from .search import FIELD_CLIP, astar, guided_search as _guided_search, normalise_field, path_is_valid
+from .search import (
+    DISTANCE_MODES,
+    FIELD_CLIP,
+    astar,
+    guided_search as _guided_search,
+    normalise_field,
+    path_is_valid,
+)
 from .sources import trajectory_sources
 
 
@@ -25,19 +32,29 @@ class GuidanceField:
     """Turns one occupancy map into a reusable field-guided-search builder + searcher."""
 
     def __init__(self, occupancy, lam: float = DEFAULT_LAM, weight: str = "linear",
-                 num_samples: int = 64, source_method: str = "project",
-                 projection_radius: int = 3, method: str = "auto", clip=None):
+                 num_samples: int = 64, source_method: str = "drop",
+                 projection_radius: int = 3, method: str = "auto", clip=None,
+                 distance: str = "manhattan"):
         self.grid = Grid(occupancy)
         if weight not in WEIGHTS:
             raise ValueError(f"weight must be one of {WEIGHTS}, got {weight!r}")
         if source_method not in ("project", "drop"):
             raise ValueError("source_method must be 'project' or 'drop'")
+        if distance not in DISTANCE_MODES:
+            raise ValueError(f"distance must be one of {DISTANCE_MODES}, got {distance!r}")
+        if not np.isfinite(lam) or lam <= 0:
+            raise ValueError(f"lam must be finite and > 0, got {lam!r}")
+        if int(num_samples) < 1:
+            raise ValueError(f"num_samples must be >= 1, got {num_samples!r}")
+        if int(projection_radius) < 0:
+            raise ValueError(f"projection_radius must be >= 0, got {projection_radius!r}")
         self.lam = float(lam)
         self.weight = weight
         self.num_samples = int(num_samples)
         self.source_method = source_method
         self.projection_radius = int(projection_radius)
         self.method = method
+        self.distance = distance
         self.clip = clip if clip is not None else FIELD_CLIP.get(weight)
         self.field: np.ndarray | None = None
         self.sources: dict | None = None
@@ -50,12 +67,15 @@ class GuidanceField:
             num_samples=self.num_samples if num_samples is None else int(num_samples),
             method=self.source_method, radius=self.projection_radius,
         )
-        if len(sources["positions_rc"]) < 2:
+        if len(sources["positions_rc"]) == 0:
             raise RuntimeError(
-                f"only {len(sources['positions_rc'])} legal source(s) left after "
-                f"handling collisions (method={self.source_method!r}); the trajectory is "
-                f"almost entirely inside obstacles -- use source_method='project' or "
-                f"supply a trajectory that follows free space")
+                "no legal source left after handling collisions "
+                f"(method={self.source_method!r}, {sources['num_out_of_bounds']} sample(s) "
+                "outside the map, "
+                f"{sources['num_dropped']} inside obstacles); the trajectory never touches "
+                "free space -- pass a trajectory that follows the map, or use "
+                "source_method='project'")
+        # one source is legal: it yields the degenerate field F(x) = w_1 - lam*d(x, s_1)
         field = build_field(self.grid, sources["positions_rc"], sources["progress"],
                             self.lam, self.weight, self.method)
         self.sources = sources
@@ -69,9 +89,16 @@ class GuidanceField:
         """Field-guided best-first search (needs :meth:`build` first unless alpha == 1)."""
         if self.field is None and not (alpha >= 1.0 and not adaptive):
             raise RuntimeError("build() the guidance field first, or use astar()")
+        for name, cell in (("start", start), ("goal", goal)):
+            if not (0 <= int(cell[0]) < self.grid.height and 0 <= int(cell[1]) < self.grid.width):
+                raise ValueError(f"{name} {tuple(cell)} is outside the {self.grid.height}x"
+                                 f"{self.grid.width} map")
+            if not self.grid.free[int(cell[0]), int(cell[1])]:
+                raise ValueError(f"{name} {tuple(cell)} is an obstacle")
         return _guided_search(self.grid, start, goal, self.field, alpha=alpha, gamma=gamma,
                               adaptive=adaptive, alpha_far=alpha_far, alpha_near=alpha_near,
-                              clip=self.clip, weight=self.weight, cutoff=cutoff)
+                              clip=self.clip, weight=self.weight, distance=self.distance,
+                              cutoff=cutoff)
 
     def astar(self, start, goal, cutoff: int = 0) -> dict:
         """Shortest-path baseline for this map."""
@@ -111,12 +138,13 @@ def guided_search(occupancy, start, goal, trajectory=None, field=None, **kwargs)
 
 
 def _field_kwargs(kwargs) -> dict:
-    keys = ("lam", "weight", "source_method", "projection_radius", "method")
+    keys = ("lam", "weight", "source_method", "projection_radius", "method", "distance")
     return {k: kwargs[k] for k in keys if k in kwargs}
 
 
 def _search_kwargs(kwargs) -> dict:
-    keys = ("alpha", "gamma", "adaptive", "alpha_far", "alpha_near", "clip", "cutoff")
+    keys = ("alpha", "gamma", "adaptive", "alpha_far", "alpha_near", "clip", "cutoff",
+            "distance")
     out = {k: kwargs[k] for k in keys if k in kwargs}
     if "clip" not in out:
         out["clip"] = kwargs.get("field_clip")

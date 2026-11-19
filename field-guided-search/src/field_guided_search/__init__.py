@@ -34,7 +34,7 @@ from .search import (
     normalise_field,
     path_is_valid,
 )
-from .search import guided_search as guided_search_arrays
+from .search import guided_search as guided_search_grid
 from .sources import resample_polyline, trajectory_sources
 
 __all__ = [
@@ -46,6 +46,6 @@ __all__ = [
     "build_field", "propagate", "propagate_scipy", "propagate_heap",
     "weight_at_progress", "WEIGHTS", "DEFAULT_LAM",
     # search
-    "astar", "guided_search_arrays", "path_is_valid",
+    "astar", "guided_search_grid", "path_is_valid",
     "normalise_field", "normalise_distance", "FIELD_CLIP",
 ]

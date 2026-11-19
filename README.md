@@ -18,6 +18,8 @@ trajectory : (T,2) polyline  ->  sources (drop/project/bridge)  ->  F(x)  ->  be
 | path | what it is |
 |---|---|
 | repository root (`src/guidance_field`, `tests/`, `docs/`, `scripts/`) | **development workspace** - the full library used for the study. Not a package: nothing to install, just put `src` on `PYTHONPATH`. |
+| `tests/test_package_parity.py` | pins the package to this workspace: same sources, fields, `d_hat` and search expansion counts |
+
 | `field-guided-search/` | the **distributable package** (`field-guided-search`, module `field_guided_search`): map + guidance path -> field -> guided search, 5 modules, 19 tests. This is the folder to copy elsewhere. |
 
 ## Running the workspace
@@ -27,7 +29,7 @@ There is no install step. From the repository root:
 ```bash
 # Windows PowerShell
 $env:PYTHONPATH="src"
-python -m unittest discover -s tests          # 56 tests
+python -m unittest discover -s tests          # 61 tests (56 + 5 parity)
 python -m guidance_field.cli demo --out out/  # CLI still works
 ```
 

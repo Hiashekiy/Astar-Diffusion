@@ -21,6 +21,7 @@ from field_guided_search import (
     resample_polyline,
     trajectory_sources,
 )
+from field_guided_search.search import normalise_distance
 
 
 def border_room(h=16, w=16, walls=()):
@@ -194,6 +195,75 @@ class ApiTests(unittest.TestCase):
         b = gfield.search((3, 3), (16, 16), alpha=0.5)
         self.assertEqual(a["status"], "success")
         self.assertEqual(b["status"], "success")
+
+
+class ReviewFixTests(unittest.TestCase):
+    """Regressions for the findings of the static review."""
+
+    def setUp(self):
+        self.occ = border_room(h=16, w=16)
+        self.grid = Grid(self.occ)
+
+    def test_default_source_method_is_drop(self):
+        self.assertEqual(GuidanceField(self.occ).source_method, "drop")
+
+    def test_out_of_bounds_samples_are_dropped_not_clipped(self):
+        traj = np.array([[5.0, 5.0], [40.0, 40.0]])       # second point lies outside the map
+        src = trajectory_sources(self.grid, traj, num_samples=20, method="drop")
+        self.assertGreater(src["num_out_of_bounds"], 0)
+        self.assertLess(src["num_kept"], src["num_samples"])
+        pos = src["positions_rc"]
+        self.assertTrue(np.all(pos[:, 0] < self.grid.height))   # nothing pinned to the edge
+        self.assertTrue(np.all(pos[:, 1] < self.grid.width))
+
+    def test_single_cell_path_validation(self):
+        same = path_is_valid(self.grid, np.array([[3, 3]]), (3, 3), (3, 3))
+        self.assertTrue(same["valid"], msg=same)
+        self.assertEqual(same["length"], 0)
+        self.assertFalse(path_is_valid(self.grid, np.array([[3, 4]]), (3, 3), (3, 3))["valid"])
+        self.assertFalse(path_is_valid(self.grid, np.array([[0, 0]]), (0, 0), (0, 0))["valid"])
+
+    def test_one_source_is_enough(self):
+        gfield = GuidanceField(self.occ)
+        gfield.build(np.array([[5.0, 5.0]]))
+        self.assertTrue(np.isfinite(gfield.field).any())
+        self.assertEqual(gfield.search((3, 3), (12, 12))["status"], "success")
+
+    def test_zero_sources_raise(self):
+        traj = np.array([[0.0, 0.0], [0.0, 15.0]])        # runs along the top wall
+        with self.assertRaises(RuntimeError):
+            GuidanceField(self.occ).build(traj)
+
+    def test_parameter_validation(self):
+        cases = [{"lam": 0.0}, {"lam": -0.1}, {"weight": "cubic"},
+                 {"distance": "euclid"}, {"num_samples": 0}, {"source_method": "bridge"}]
+        for kwargs in cases:
+            with self.assertRaises(ValueError, msg=str(kwargs)):
+                GuidanceField(self.occ, **kwargs)
+
+    def test_obstacle_endpoint_is_rejected(self):
+        gfield = GuidanceField(self.occ)
+        gfield.build(np.array([[5.0, 5.0], [12.0, 12.0]]))
+        with self.assertRaises(ValueError):
+            gfield.search((0, 0), (12, 12))
+
+    def test_timing_is_split(self):
+        gfield = GuidanceField(self.occ)
+        gfield.build(np.array([[5.0, 5.0], [12.0, 12.0]]))
+        res = gfield.search((3, 3), (12, 12), alpha=0.5)
+        for key in ("preprocess_ms", "search_ms", "total_ms"):
+            self.assertIn(key, res)
+        self.assertGreaterEqual(res["preprocess_ms"], 0.0)
+        self.assertAlmostEqual(res["total_ms"], res["preprocess_ms"] + res["search_ms"], places=6)
+        self.assertEqual(res["time_ms"], res["search_ms"])
+
+    def test_distance_modes_differ(self):
+        manhattan, _ = normalise_distance(self.grid, (12, 12), mode="manhattan")
+        geodesic, _ = normalise_distance(self.grid, (12, 12), mode="geodesic")
+        self.assertFalse(np.allclose(manhattan, geodesic))
+        self.assertAlmostEqual(float(geodesic[12, 12]), 0.0)
+        with self.assertRaises(ValueError):
+            normalise_distance(self.grid, (12, 12), mode="euclid")
 
 
 if __name__ == "__main__":

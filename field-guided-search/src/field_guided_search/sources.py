@@ -63,12 +63,16 @@ def trajectory_sources(grid, trajectory, num_samples: int = 64, method: str = "p
         raise ValueError(f"method must be 'project' or 'drop', got {method!r}")
     points, progress = resample_polyline(trajectory, num_samples)
     cells = np.rint(points).astype(int)
-    cells[:, 0] = np.clip(cells[:, 0], 0, grid.height - 1)
-    cells[:, 1] = np.clip(cells[:, 1], 0, grid.width - 1)
 
-    kept_pos, kept_u, dropped = [], [], 0
+    kept_pos, kept_u = [], []
+    dropped = out_of_bounds = 0
     for (r, c), u in zip(cells, progress):
         r, c = int(r), int(c)
+        # a sample outside the map is not "on the nearest cell" -- clipping it there would
+        # invent a source the trajectory never visited, so it is skipped instead
+        if not (0 <= r < grid.height and 0 <= c < grid.width):
+            out_of_bounds += 1
+            continue
         if grid.free[r, c]:
             target = (r, c)
         elif method == "drop":
@@ -84,6 +88,8 @@ def trajectory_sources(grid, trajectory, num_samples: int = 64, method: str = "p
     return {
         "positions_rc": np.asarray(kept_pos, dtype=int).reshape(-1, 2),
         "progress": np.asarray(kept_u, dtype=np.float64),
-        "num_dropped": int(dropped),
         "num_samples": int(num_samples),
+        "num_kept": len(kept_pos),
+        "num_dropped": int(dropped),
+        "num_out_of_bounds": int(out_of_bounds),
     }

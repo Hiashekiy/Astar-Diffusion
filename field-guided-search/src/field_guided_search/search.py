@@ -11,8 +11,17 @@ The guided priority is a single expression with two knobs:
 * ``adaptive``             -> alpha varies with the remaining distance
 
 ``F_hat`` and ``d_hat_G`` are normalised *before* the search, and the priority function only
-ever sees those precomputed arrays, never the accumulated cost ``g``. Only ``astar`` claims
+ever sees those precomputed maps, never the accumulated cost ``g``. Only ``astar`` claims
 shortest-path optimality.
+
+Two distance models exist because they are not interchangeable:
+
+* ``distance="manhattan"`` (default) -- the definition the published experiments used
+* ``distance="geodesic"``            -- free-space BFS distance, respects walls
+
+Timing is reported as ``preprocess_ms`` (distance model, normalisation, priority map),
+``search_ms`` (the queue loop) and ``total_ms``; ``time_ms`` is kept as an alias of
+``search_ms`` for callers written before the split.
 """
 
 from __future__ import annotations
@@ -31,6 +40,9 @@ FIELD_CLIP = {
     "quadratic": (-0.10, 1.00),
 }
 
+DISTANCE_MODES = ("manhattan", "geodesic")
+EPS = 1e-12
+
 
 # --------------------------------------------------------------------------- #
 # normalisation
@@ -42,14 +54,28 @@ def normalise_field(field: np.ndarray, clip=None, weight: str = "linear") -> np.
     return (values - lo) / (hi - lo)
 
 
-def normalise_distance(grid: Grid, goal) -> tuple[np.ndarray, float]:
-    """d_hat_G in [0, 1]: geodesic distance to the goal divided by its maximum."""
+def normalise_distance(grid: Grid, goal, mode: str = "manhattan") -> tuple[np.ndarray, float]:
+    """d_hat_G in [0, 1]: distance to the goal divided by its maximum.
+
+    ``manhattan`` ignores obstacles (the published experiments used this); ``geodesic`` uses
+    the free-space BFS distance, so it respects walls. Results obtained with one are not
+    evidence for the other.
+    """
+    if mode not in DISTANCE_MODES:
+        raise ValueError(f"distance must be one of {DISTANCE_MODES}, got {mode!r}")
+    if mode == "manhattan":
+        rows = np.arange(grid.height)[:, None]
+        cols = np.arange(grid.width)[None, :]
+        dist = (np.abs(rows - goal[0]) + np.abs(cols - goal[1])).astype(np.float64)
+        # the maximum is taken over free cells only: obstacle corners are never visited, and
+        # using them would shrink every d_hat on the map (this is what the experiment code
+        # does, so it is the definition the published alphas belong to)
+        d_max = float(dist[grid.free].max()) if grid.free.any() else 0.0
+        return dist / (d_max + EPS), d_max
     dist = grid.bfs_distance([grid.idx(*goal)]).astype(np.float64)
-    dist[dist < 0] = np.nan
-    d_max = float(np.nanmax(dist)) if np.isfinite(dist).any() else 1.0
-    d_max = max(d_max, 1.0)
-    out = np.where(np.isfinite(dist), dist / d_max, 1.0)
-    return out, d_max
+    reachable = (dist >= 0) & grid.free
+    d_max = float(dist[reachable].max()) if reachable.any() else 0.0
+    return np.where(reachable, dist / (d_max + EPS), 1.0), d_max
 
 
 # --------------------------------------------------------------------------- #
@@ -62,30 +88,51 @@ def _pack(grid: Grid, path: list[int]) -> np.ndarray:
     return np.stack([rows, cols], axis=1)
 
 
+def _result(status: str, grid: Grid, path, trace, expanded: int, generated: int,
+            length, preprocess_ms: float, t0: float) -> dict:
+    search_ms = (time.perf_counter() - t0) * 1000.0
+    return {
+        "status": status,
+        "path": _pack(grid, path),
+        "trace": _pack(grid, trace),
+        "expanded": int(expanded),
+        "generated": int(generated),
+        "length": length,
+        "search_ms": search_ms,
+        "preprocess_ms": float(preprocess_ms),
+        "total_ms": float(preprocess_ms) + search_ms,
+        "time_ms": search_ms,  # alias kept for callers written before the split
+    }
+
+
 def path_is_valid(grid: Grid, path, start, goal) -> dict:
     """Continuity, obstacle and endpoint check on a returned path."""
     arr = np.asarray(path, dtype=int)
     if arr.size == 0:
         return {"valid": False, "reason": "empty path"}
     if len(arr) == 1:
-        return {"valid": arr[0, 0] == start[0] and arr[0, 1] == goal[0], "length": 0}
+        cell = (int(arr[0, 0]), int(arr[0, 1]))
+        if cell != tuple(start) or cell != tuple(goal):
+            return {"valid": False, "reason": "single-cell path is not start == goal"}
+        if not grid.free[cell[0], cell[1]]:
+            return {"valid": False, "reason": "path crosses an obstacle"}
+        return {"valid": True, "length": 0}
     if tuple(arr[0]) != tuple(start) or tuple(arr[-1]) != tuple(goal):
         return {"valid": False, "reason": "endpoints do not match start/goal"}
-    steps = np.abs(np.diff(arr, axis=0)).sum(axis=1)
-    if np.any(steps != 1):
+    if np.any(np.abs(np.diff(arr, axis=0)).sum(axis=1) != 1):
         return {"valid": False, "reason": "path is not 4-connected"}
     if not np.all(grid.free[arr[:, 0], arr[:, 1]]):
         return {"valid": False, "reason": "path crosses an obstacle"}
     return {"valid": True, "length": int(len(arr) - 1)}
 
 
-def _best_first(grid: Grid, start, goal, priority, cutoff: int = 0) -> dict:
+def _best_first(grid: Grid, start, goal, priority, cutoff: int = 0,
+                preprocess_ms: float = 0.0) -> dict:
     """Generic best-first loop driven by a pure ``priority(r, c)`` callable."""
     t0 = time.perf_counter()
     s, t = grid.idx(*start), grid.idx(*goal)
     if not grid.free.flat[s] or not grid.free.flat[t]:
-        return {"status": "invalid", "path": np.zeros((0, 2), int), "trace": np.zeros((0, 2), int),
-                "expanded": 0, "generated": 0, "length": None, "time_ms": 0.0}
+        return _result("invalid", grid, [], [], 0, 0, None, preprocess_ms, t0)
     parent = {s: -1}
     seen = {s}
     counter = 0
@@ -102,22 +149,13 @@ def _best_first(grid: Grid, start, goal, priority, cutoff: int = 0) -> dict:
                 path.append(v)
                 v = parent[v]
             path.reverse()
-            return {
-                "status": "success",
-                "path": _pack(grid, path),
-                "trace": _pack(grid, trace),
-                "expanded": len(trace),
-                "generated": len(seen),
-                "length": len(path) - 1,
-                "time_ms": (time.perf_counter() - t0) * 1000.0,
-            }
+            return _result("success", grid, path, trace, len(trace), len(seen),
+                           len(path) - 1, preprocess_ms, t0)
         if cutoff and len(trace) >= cutoff:
-            return {"status": "cutoff", "path": np.zeros((0, 2), int), "trace": _pack(grid, trace),
-                    "expanded": len(trace), "generated": len(seen), "length": None,
-                    "time_ms": (time.perf_counter() - t0) * 1000.0}
+            return _result("cutoff", grid, [], trace, len(trace), len(seen), None, preprocess_ms, t0)
         for u in nbr[v]:
             u = int(u)
-            if u in seen:
+            if u < 0 or u in seen:          # -1 marks "no neighbour" in the table
                 continue
             seen.add(u)
             parent[u] = v
@@ -125,9 +163,7 @@ def _best_first(grid: Grid, start, goal, priority, cutoff: int = 0) -> dict:
                 rows_cache[u] = divmod(u, grid.width)
             counter += 1
             heapq.heappush(heap, (priority(*rows_cache[u]), counter, u))
-    return {"status": "unreachable", "path": np.zeros((0, 2), int), "trace": _pack(grid, trace),
-            "expanded": len(trace), "generated": len(seen), "length": None,
-            "time_ms": (time.perf_counter() - t0) * 1000.0}
+    return _result("unreachable", grid, [], trace, len(trace), len(seen), None, preprocess_ms, t0)
 
 
 # --------------------------------------------------------------------------- #
@@ -138,8 +174,7 @@ def astar(grid: Grid, start, goal, cutoff: int = 0) -> dict:
     t0 = time.perf_counter()
     s, t = grid.idx(*start), grid.idx(*goal)
     if not grid.free.flat[s] or not grid.free.flat[t]:
-        return {"status": "invalid", "path": np.zeros((0, 2), int), "trace": np.zeros((0, 2), int),
-                "expanded": 0, "generated": 0, "length": None, "time_ms": 0.0}
+        return _result("invalid", grid, [], [], 0, 0, None, 0.0, t0)
     gr, gc = goal
     g = {s: 0}
     parent = {s: -1}
@@ -148,6 +183,7 @@ def astar(grid: Grid, start, goal, cutoff: int = 0) -> dict:
     closed = set()
     trace: list[int] = []
     nbr = grid._nbr
+    status = "unreachable"
     while heap:
         _, _, v = heapq.heappop(heap)
         if v in closed:
@@ -160,37 +196,36 @@ def astar(grid: Grid, start, goal, cutoff: int = 0) -> dict:
                 path.append(v)
                 v = parent[v]
             path.reverse()
-            return {"status": "success", "path": _pack(grid, path), "trace": _pack(grid, trace),
-                    "expanded": len(trace), "generated": len(g), "length": int(g[t]),
-                    "time_ms": (time.perf_counter() - t0) * 1000.0}
+            return _result("success", grid, path, trace, len(trace), len(g), int(g[t]), 0.0, t0)
         if cutoff and len(trace) >= cutoff:
+            status = "cutoff"
             break
         gv = g[v] + 1
         for u in nbr[v]:
             u = int(u)
-            if u in closed or g.get(u, 1 << 30) <= gv:
+            if u < 0 or u in closed or g.get(u, 1 << 30) <= gv:   # -1 = no neighbour
                 continue
             g[u] = gv
             parent[u] = v
             r, c = divmod(u, grid.width)
             counter += 1
             heapq.heappush(heap, (gv + abs(r - gr) + abs(c - gc), counter, u))
-    status = "cutoff" if cutoff and len(trace) >= cutoff else "unreachable"
-    return {"status": status, "path": np.zeros((0, 2), int), "trace": _pack(grid, trace),
-            "expanded": len(trace), "generated": len(g), "length": None,
-            "time_ms": (time.perf_counter() - t0) * 1000.0}
+    return _result(status, grid, [], trace, len(trace), len(g), None, 0.0, t0)
 
 
 def guided_search(grid: Grid, start, goal, field: np.ndarray | None = None,
                   alpha: float = 0.0, gamma: float = 1.0, adaptive: bool = False,
                   alpha_far: float = 0.25, alpha_near: float = 0.75,
-                  clip=None, weight: str = "linear", cutoff: int = 0) -> dict:
+                  clip=None, weight: str = "linear", distance: str = "manhattan",
+                  cutoff: int = 0) -> dict:
     """Best-first search on the guidance field, optionally fused with the goal distance."""
-    d_hat, d_max = normalise_distance(grid, goal)
+    t_pre = time.perf_counter()
     if field is not None and not np.isfinite(field).any():
         raise ValueError("the guidance field has no finite cell; build it from a trajectory "
                          "that touches free space")
-    f_hat = normalise_field(field, clip, weight) if field is not None else np.zeros((grid.height, grid.width))
+    d_hat, _ = normalise_distance(grid, goal, mode=distance)
+    f_hat = (normalise_field(field, clip, weight) if field is not None
+             else np.zeros((grid.height, grid.width)))
     if adaptive:
         # far from the goal trust the field more, close to the goal trust the distance more
         alpha_map = alpha_far + (alpha_near - alpha_far) * (1.0 - d_hat)
@@ -198,4 +233,6 @@ def guided_search(grid: Grid, start, goal, field: np.ndarray | None = None,
         alpha_map = np.full_like(d_hat, float(alpha))
     pow_term = np.power(np.clip(d_hat, 0.0, 1.0), float(gamma))
     priority_map = alpha_map * pow_term - (1.0 - alpha_map) * f_hat
-    return _best_first(grid, start, goal, lambda r, c: float(priority_map[r, c]), cutoff)
+    preprocess_ms = (time.perf_counter() - t_pre) * 1000.0
+    return _best_first(grid, start, goal, lambda r, c: float(priority_map[r, c]), cutoff,
+                       preprocess_ms=preprocess_ms)
