@@ -13,22 +13,30 @@ trajectory : (T,2) polyline  ->  sources (drop/project/bridge)  ->  F(x)  ->  be
 
 ---
 
-## Two packages in this repository
+## Repository layout
 
-| path | contents | when |
-|---|---|---|
-| repository root | full library: scenarios, trajectory generation, source repair (M0/M1/M2), metrics, experiment runner, figures, CLI | reproducing the study, exploring map families |
-| `guidance-field-core/` | 5-module minimal implementation: `GuidanceField(occupancy).build(trajectory).search(start, goal)` | dropping the field+search into another project |
+| path | what it is |
+|---|---|
+| repository root (`src/guidance_field`, `tests/`, `docs/`, `scripts/`) | **development workspace** - the full library used for the study. Not a package: nothing to install, just put `src` on `PYTHONPATH`. |
+| `field-guided-search/` | the **distributable package** (`field-guided-search`, module `field_guided_search`): map + guidance path -> field -> guided search, 5 modules, 19 tests. This is the folder to copy elsewhere. |
 
-`guidance-field-core/` is a standalone distribution (`guidance-field-core`, with its own
-README and pyproject). Both expose the
-module name `guidance_field`, so `pip install` only one of them at a time.
+## Running the workspace
 
-## Install
+There is no install step. From the repository root:
 
 ```bash
-pip install -e .            # needs numpy, scipy, matplotlib only
+# Windows PowerShell
+$env:PYTHONPATH="src"
+python -m unittest discover -s tests          # 56 tests
+python -m guidance_field.cli demo --out out/  # CLI still works
 ```
+
+```bash
+# bash / zsh
+PYTHONPATH=src python -m unittest discover -s tests
+```
+
+Requirements: `numpy`, `scipy`, `matplotlib` (see `requirements.txt`).
 
 ## Quick start (Python)
 
@@ -56,13 +64,11 @@ for name, pol in (("A*", None),
 ## Quick start (CLI)
 
 ```bash
-guidance-field demo --out out/                 # generates a map, prints the comparison, writes 2 PNGs
-guidance-field experiment --maps 2 --out out/  # full study -> CSV + summary.json
-guidance-field field --map map.npy --trajectory traj.npy --out field.png
+$env:PYTHONPATH="src"                          # PowerShell; bash: export PYTHONPATH=src
+python -m guidance_field.cli demo --out out/                 # one map + comparison + 2 PNGs
+python -m guidance_field.cli experiment --maps 2 --out out/  # study -> CSV + summary.json
+python -m guidance_field.cli field --map map.npy --trajectory traj.npy --out field.png
 ```
-
-If the console script is not on your `PATH` (pip installs it into the interpreter's
-Scripts directory), use `python -m guidance_field.cli ...` instead - same commands.
 
 `demo` on a 64x64 maze with a moderately colliding trajectory (measured, not illustrative):
 
