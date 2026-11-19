@@ -69,11 +69,12 @@ def propagate_heap(grid: Grid, samples, weights, lam: float, return_owner: bool 
     field2d, owner2d = _seed(grid, samples, weights)
     field, owner = field2d.ravel().copy(), owner2d.ravel().copy()
     heap = []
+    queued = set()
     for r, c in samples:
         idx = grid.idx(int(r), int(c))
-        item = (-field[idx], idx)
-        if item not in heap:
-            heap.append(item)
+        if idx not in queued and field[idx] > NEG_INF:
+            queued.add(idx)
+            heap.append((-field[idx], idx))
     heapq.heapify(heap)
     nbr = grid._nbr
     while heap:
@@ -100,6 +101,7 @@ def propagate_vectorized(grid: Grid, samples, weights, lam: float, return_owner:
     free, work = grid.free, np.empty_like(field)
     converged = False
     for _round in range(max_rounds):
+        batch_start = field.copy()
         for _step in range(max(1, steps_per_round)):
             np.copyto(work, field)
             np.maximum(work[1:, :], field[:-1, :] - lam, out=work[1:, :])
@@ -108,18 +110,7 @@ def propagate_vectorized(grid: Grid, samples, weights, lam: float, return_owner:
             np.maximum(work[:, :-1], field[:, 1:] - lam, out=work[:, :-1])
             work[~free] = NEG_INF
             field, work = work, field
-        # Check only after a complete batch of synchronous steps.
-        if np.array_equal(field, work):
-            # This comparison is not a valid convergence test: work is the previous
-            # iterate. Recompute one operator below to test the fixed-point condition.
-            pass
-        np.copyto(work, field)
-        np.maximum(work[1:, :], field[:-1, :] - lam, out=work[1:, :])
-        np.maximum(work[:-1, :], field[1:, :] - lam, out=work[:-1, :])
-        np.maximum(work[:, 1:], field[:, :-1] - lam, out=work[:, 1:])
-        np.maximum(work[:, :-1], field[:, 1:] - lam, out=work[:, :-1])
-        work[~free] = NEG_INF
-        if np.array_equal(work, field):
+        if np.array_equal(field, batch_start):
             converged = True
             break
     if not converged:
