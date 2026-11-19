@@ -18,6 +18,7 @@ from guidance_stage2.propagation import (  # noqa: E402
     propagate_auto,
     propagate_bucket,
     propagate_heap,
+    propagate_scipy,
     propagate_vectorized,
 )
 
@@ -72,6 +73,29 @@ class PropagationEquivalence(unittest.TestCase):
             ok = g.free & np.isfinite(ref) & np.isfinite(out)
             self.assertLess(float(np.max(np.abs(ref[ok] - out[ok]))), 1e-12)
             self.assertEqual(int((np.isnan(ref) != np.isnan(out)).sum()), 0)
+
+    def test_scipy_matches_heap_exactly(self):
+        for g in self.grids:
+            samples, w = sources_on_path(g)
+            ref = propagate_heap(g, samples, w, LAM)
+            out = propagate_scipy(g, samples, w, LAM)
+            ok = g.free & np.isfinite(ref) & np.isfinite(out)
+            self.assertLess(float(np.max(np.abs(ref[ok] - out[ok]))), 1e-10)
+            self.assertEqual(int((np.isnan(ref) != np.isnan(out)).sum()), 0)
+
+    def test_auto_uses_exact_scipy_backend(self):
+        g = self.grids[1]
+        samples, w = sources_on_path(g)
+        ref = propagate_heap(g, samples, w, LAM)
+        out = propagate_auto(g, samples, w, LAM)
+        np.testing.assert_allclose(out, ref, rtol=0.0, atol=1e-10, equal_nan=True)
+
+    def test_invalid_sources_and_lam_are_rejected(self):
+        g = self.grids[0]
+        with self.assertRaises(ValueError):
+            propagate_scipy(g, np.array([[0, 0]]), np.array([1.0]), LAM)
+        with self.assertRaises(ValueError):
+            propagate_scipy(g, np.array([[2, 2]]), np.array([1.0]), 0.0)
 
     def test_bucket_error_bounded_by_quantisation(self):
         for scale in (4, 16):
