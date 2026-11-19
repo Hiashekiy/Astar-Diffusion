@@ -50,6 +50,9 @@ guidance-field experiment --maps 2 --out out/  # full study -> CSV + summary.jso
 guidance-field field --map map.npy --trajectory traj.npy --out field.png
 ```
 
+If the console script is not on your `PATH` (pip installs it into the interpreter's
+Scripts directory), use `python -m guidance_field.cli ...` instead - same commands.
+
 `demo` on a 64x64 maze with a moderately colliding trajectory (measured, not illustrative):
 
 | method | status | expanded | path | ms | vs A\* |
