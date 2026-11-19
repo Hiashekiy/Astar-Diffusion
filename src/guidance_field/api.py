@@ -1,0 +1,123 @@
+"""Public API: map + guidance path -> guidance field -> guided search.
+
+    from guidance_field import GuidanceField
+
+    gfield = GuidanceField(occupancy)          # occupancy: (H, W) with 0 = free
+    field  = gfield.build(trajectory)          # trajectory: (N, 2) as [row, col]
+    result = gfield.search(start, goal)        # or search(..., alpha=0.5) for fusion
+    result["path"], result["expanded"], result["length"], result["status"]
+
+``GuidanceField`` is a thin state holder; the same work is available as two functions:
+:func:`build_guidance_field` and :func:`guided_search`.
+"""
+
+from __future__ import annotations
+
+import numpy as np
+
+from .field import DEFAULT_LAM, WEIGHTS, build_field, propagate
+from .grid import Grid
+from .search import FIELD_CLIP, astar, guided_search as _guided_search, normalise_field, path_is_valid
+from .sources import trajectory_sources
+
+
+class GuidanceField:
+    """Turns one occupancy map into a reusable guidance-field builder + searcher."""
+
+    def __init__(self, occupancy, lam: float = DEFAULT_LAM, weight: str = "linear",
+                 num_samples: int = 64, source_method: str = "project",
+                 projection_radius: int = 3, method: str = "auto", clip=None):
+        self.grid = Grid(occupancy)
+        if weight not in WEIGHTS:
+            raise ValueError(f"weight must be one of {WEIGHTS}, got {weight!r}")
+        if source_method not in ("project", "drop"):
+            raise ValueError("source_method must be 'project' or 'drop'")
+        self.lam = float(lam)
+        self.weight = weight
+        self.num_samples = int(num_samples)
+        self.source_method = source_method
+        self.projection_radius = int(projection_radius)
+        self.method = method
+        self.clip = clip if clip is not None else FIELD_CLIP.get(weight)
+        self.field: np.ndarray | None = None
+        self.sources: dict | None = None
+
+    # ------------------------------------------------------------------ #
+    def build(self, trajectory, num_samples: int | None = None) -> np.ndarray:
+        """Build and store the field from a guidance trajectory that may cross obstacles."""
+        sources = trajectory_sources(
+            self.grid, trajectory,
+            num_samples=self.num_samples if num_samples is None else int(num_samples),
+            method=self.source_method, radius=self.projection_radius,
+        )
+        if len(sources["positions_rc"]) < 2:
+            raise RuntimeError(
+                f"only {len(sources['positions_rc'])} legal source(s) left after "
+                f"handling collisions (method={self.source_method!r}); the trajectory is "
+                f"almost entirely inside obstacles -- use source_method='project' or "
+                f"supply a trajectory that follows free space")
+        field = build_field(self.grid, sources["positions_rc"], sources["progress"],
+                            self.lam, self.weight, self.method)
+        self.sources = sources
+        self.field = field
+        return field
+
+    # ------------------------------------------------------------------ #
+    def search(self, start, goal, alpha: float = 0.0, gamma: float = 1.0,
+               adaptive: bool = False, alpha_far: float = 0.25, alpha_near: float = 0.75,
+               cutoff: int = 0) -> dict:
+        """Field-guided best-first search (needs :meth:`build` first unless alpha == 1)."""
+        if self.field is None and not (alpha >= 1.0 and not adaptive):
+            raise RuntimeError("build() the guidance field first, or use astar()")
+        return _guided_search(self.grid, start, goal, self.field, alpha=alpha, gamma=gamma,
+                              adaptive=adaptive, alpha_far=alpha_far, alpha_near=alpha_near,
+                              clip=self.clip, weight=self.weight, cutoff=cutoff)
+
+    def astar(self, start, goal, cutoff: int = 0) -> dict:
+        """Shortest-path baseline for this map."""
+        return astar(self.grid, start, goal, cutoff)
+
+    def is_valid(self, path, start, goal) -> dict:
+        return path_is_valid(self.grid, path, start, goal)
+
+    def normalised(self) -> dict:
+        """The two scalar maps the search actually uses (handy for plotting or reuse)."""
+        if self.field is None:
+            raise RuntimeError("build() the guidance field first")
+        return {"F_hat": normalise_field(self.field, self.clip, self.weight),
+                "field": self.field}
+
+
+# --------------------------------------------------------------------------- #
+# functional shortcuts
+# --------------------------------------------------------------------------- #
+def build_guidance_field(occupancy, trajectory, num_samples: int = 64, **kwargs) -> np.ndarray:
+    """One call: map + guidance path -> field ``(H, W)`` (NaN on obstacles)."""
+    gfield = GuidanceField(occupancy, **_field_kwargs(kwargs))
+    return gfield.build(trajectory, num_samples=num_samples)
+
+
+def guided_search(occupancy, start, goal, trajectory=None, field=None, **kwargs) -> dict:
+    """One call: map + (guidance path or prebuilt field) -> search result."""
+    grid = Grid(occupancy)
+    if field is None:
+        if trajectory is None:
+            raise ValueError("pass either `trajectory` or `field`")
+        gfield = GuidanceField(occupancy, **_field_kwargs(kwargs))
+        field = gfield.build(trajectory, num_samples=kwargs.get("num_samples", 64))
+        kwargs.setdefault("weight", gfield.weight)
+        kwargs.setdefault("clip", gfield.clip)
+    return _guided_search(grid, start, goal, field, **_search_kwargs(kwargs))
+
+
+def _field_kwargs(kwargs) -> dict:
+    keys = ("lam", "weight", "source_method", "projection_radius", "method")
+    return {k: kwargs[k] for k in keys if k in kwargs}
+
+
+def _search_kwargs(kwargs) -> dict:
+    keys = ("alpha", "gamma", "adaptive", "alpha_far", "alpha_near", "clip", "cutoff")
+    out = {k: kwargs[k] for k in keys if k in kwargs}
+    if "clip" not in out:
+        out["clip"] = kwargs.get("field_clip")
+    return out
