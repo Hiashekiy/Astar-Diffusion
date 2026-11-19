@@ -82,16 +82,22 @@ def _collide_flags(raw: np.ndarray, intervals) -> np.ndarray:
 
 
 def draw_trajectory(ax, raw: np.ndarray, intervals, lw: float = 1.8, alpha: float = 1.0,
-                    halo: bool = False):
-    """Continuous polyline with free parts in blue and collision parts in red."""
+                    halo: bool = False, halo_color: str = "black", halo_alpha: float = 0.45):
+    """Continuous polyline in image coordinates (x = col, y = row), free blue / collision red."""
     if len(raw) < 2:
         return
     segs, colors = _colored_segments(raw, intervals)
     if not segs:
         return
+    # _colored_segments returns (row, col); LineCollection expects (x, y) = (col, row)
+    segs_xy = [np.asarray(seg)[:, ::-1] for seg in segs]
     if halo:
-        ax.add_collection(LineCollection(segs, colors="black", linewidths=lw + 1.4, alpha=0.45, zorder=4))
-    ax.add_collection(LineCollection(segs, colors=colors, linewidths=lw, alpha=alpha, capstyle="round", zorder=5))
+        ax.add_collection(
+            LineCollection(segs_xy, colors=halo_color, linewidths=lw + 2.2, alpha=halo_alpha, zorder=4)
+        )
+    ax.add_collection(
+        LineCollection(segs_xy, colors=colors, linewidths=lw, alpha=alpha, capstyle="round", zorder=5)
+    )
 
 
 def _mark(ax, rc, color, marker="o", ms=7, label=None):
@@ -151,8 +157,13 @@ def _field_panel(ax, occ, field, title, kind, raw=None, intervals=None, support=
 
 
 def display_range(kind: str) -> tuple[float, float]:
-    """Colour range that shows the mechanism, with the far-field tail clipped."""
-    return (0.50, 1.0) if kind == "uniform" else (-0.10, 1.0)
+    """Colour range that shows the mechanism, with the far-field tail clipped.
+
+    Reads the shared clip table so the search stage normalises with exactly these bounds.
+    """
+    from guidance_stage2.config import FIELD_CLIP
+
+    return FIELD_CLIP[kind]
 
 
 # --------------------------------------------------------------------------- #
@@ -501,12 +512,13 @@ def figure_single_field(out_path, occ, field, title, subtitle, kind, raw=None, i
         ax.plot(support[:, 1], support[:, 0], "-", color="black", lw=3.0, alpha=0.45, zorder=5)
         ax.plot(support[:, 1], support[:, 0], "-", color=COL_BRIDGE, lw=1.7, alpha=1.0, zorder=6)
     if raw is not None:
-        draw_trajectory(ax, raw, intervals or [], lw=1.8, alpha=1.0, halo=True)
+        draw_trajectory(ax, raw, intervals or [], lw=1.9, alpha=1.0,
+                        halo=True, halo_color="white", halo_alpha=0.9)
     if sources is not None and len(sources):
         src = np.asarray(sources).reshape(-1, 2)
         if source_progress is not None and len(source_progress) == len(src):
             ax.scatter(src[:, 1], src[:, 0], c=source_progress, cmap=OWNER_CMAP, vmin=0.0, vmax=1.0,
-                       s=22, edgecolors="white", linewidths=0.5, zorder=7)
+                       s=11, edgecolors="white", linewidths=0.3, zorder=7)
         else:
             ax.scatter(src[:, 1], src[:, 0], c="white", edgecolors="black", s=10, zorder=7)
     if start is not None:

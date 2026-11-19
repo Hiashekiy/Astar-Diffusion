@@ -37,6 +37,14 @@ FREE_FRACTION_BANDS = {
     "D": (0.42, 0.78),
 }
 
+# Canonical clip bounds per weighting: used for figure colour ranges *and* for the
+# search-stage field normalisation, so one alpha means the same thing everywhere.
+FIELD_CLIP = {
+    "uniform": (0.50, 1.00),
+    "linear": (-0.10, 1.00),
+    "quadratic": (-0.10, 1.00),
+}
+
 SOURCE_METHODS = ("M0", "M1", "M2")
 WEIGHT_KINDS = ("uniform", "linear", "quadratic")
 

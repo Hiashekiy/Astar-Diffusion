@@ -1,4 +1,4 @@
-# Guidance Field — Stage 1 & Stage 2A
+# Guidance Field — Stage 1, Stage 2A, Stage 3
 
 Two mechanism-validation stages for one idea: turn a trajectory into a 2-D obstacle-aware
 guidance field.
@@ -9,6 +9,11 @@ guidance field.
   obstacles) still yield a legal, continuous, directional field? Yes, 34/34 acceptance,
   with a data-driven answer to "which repair method wins where".
   Details: [`docs/stage2-report.md`](docs/stage2-report.md).
+- **Stage 3** — does that field actually help a graph search, beyond the goal distance?
+  13/13 acceptance, 1440 searches: expansion drops to 0.20x A* with a 4% longer path, but
+  *only* when the input trajectory is good. After accelerating field construction the whole
+  guided pipeline also beats A* end to end (2.9 ms vs 4.0 ms).
+  Details: [`docs/stage3-report.md`](docs/stage3-report.md).
 
 **No learning, no search, no diffusion in either stage.** Trajectories come from
 traditional graph search; search integration is stage 2B.
@@ -22,7 +27,10 @@ python scripts/run_stage1.py           # 20 maps x 4 grades x 3 weightings (~46 
 python scripts/check_acceptance.py     # stage-1 audit, 7 criteria
 python scripts/run_stage2.py           # 20 maps x 4 grades x 3 methods x 3 weights = 720 fields (~80 s)
 python scripts/check_stage2.py         # stage-2 audit, 34 criteria (A-E)
-python -m unittest discover -s tests   # 33 unit tests (~4 s)
+python scripts/run_stage3.py           # 20 maps x 4 grades x 18 configurations = 1440 searches (~16 s)
+python scripts/check_stage3.py         # stage-3 audit, 13 criteria
+python scripts/benchmark_propagation.py  # heap vs vectorised vs bucket, 64/128/256
+python -m unittest discover -s tests   # 60 unit tests (~5 s)
 ```
 
 Flags: `--quick` (one map per family), `--no-figures`, `--outdir`, `--lam`, `--samples`.
@@ -153,6 +161,58 @@ the methods actually differ), `owners.png`, `progress_profiles.png`.
 
 ---
 
+# Stage 3 — guidance field into a search (B0–B5)
+
+Only the OPEN priority changes; fields, trajectories and collision detection are frozen.
+Inputs: M0 sources (obstacle samples dropped, original `u` kept), linear + quadratic fields.
+
+| id | method | priority J(n) |
+|---|---|---|
+| B0 | A* baseline | `g + h` |
+| B1 | Distance-GBFS | `d_hat` |
+| B2 | Field-Only | `-F_hat` |
+| B3 | Linear Fusion | `alpha*d_hat - (1-alpha)*F_hat` |
+| B4 | Nonlinear Fusion | `alpha*d_hat^gamma - (1-alpha)*F_hat`, gamma=0.5 |
+| B5 | Adaptive Fusion | alpha(n) 0.25 -> 0.75, gamma=0.5 |
+
+`F_hat` is normalised with the **shared** clip table (`FIELD_CLIP`, the same bounds the
+figures use); `d_hat = d_G / D_max` over free cells. B1–B5 cannot see `g` — the priority
+functions only receive precomputed scalar maps, which is checked by a test rather than
+trusted.
+
+## Result (20 maps x 4 grades = 1440 searches, 100% success, 100% valid paths)
+
+| method | expanded | search ms | **total ms** | L/L* |
+|---|---:|---:|---:|---:|
+| B0 A* | 1542 | 3.99 | **3.99** | 1.000 |
+| B1 Distance-GBFS | 488 | 0.70 | 0.70 | 1.141 |
+| B2 Field-Only linear | **336** | 0.53 | 7.07 | **1.031** |
+| B3 Linear Fusion linear | 368 | 0.59 | 7.13 | 1.053 |
+| B4 Nonlinear Fusion linear | 351 | 0.57 | 7.11 | 1.049 |
+| B5 Adaptive linear | 349 | 0.60 | 7.14 | 1.044 |
+
+Best expansion ratio: **0.204 x A\*** (B3, linear field, alpha=0.25) with only 4.2% longer paths.
+
+## Three findings worth keeping
+
+1. **The prior is worth what the trajectory is worth.** Field-Only expands 137 / 205 nodes
+   at G0 / G1 (vs 488 for distance-only greedy) but 459 / 544 at G2 / G3 — *worse* than the
+   distance heuristic once the trajectory is badly colliding. Fusion with alpha=0.25 still
+   recovers most of it.
+2. **alpha behaves exactly as risk R2 predicted**: 0.25 -> 0.50 -> 0.75 drives expansions
+   0.204 -> 0.222 -> 0.272 and path length 1.042 -> 1.045 -> 1.072, drifting toward
+   Distance-GBFS. The nonlinear term (gamma=0.5) only helps slightly at alpha >= 0.5.
+3. **Risk R5 was real, then got fixed**: with the stage-1 heap propagator the field cost
+   6.6 ms and the guided pipeline was 1.8x *slower* end to end than A*. Replacing it with a
+   numpy synchronous max-plus sweep (bit-identical result) plus two micro-optimisations cuts
+   the build to 2.3 ms, so the pipeline is now 2.89 ms vs A*'s 4.01 ms — 1.4x faster, still
+   with 5x fewer expansions. See [`docs/propagation-benchmark.md`](docs/propagation-benchmark.md).
+
+Nothing here claims shortest-path optimality: B1–B5 average `L/L* = 1.056` and hit `L*`
+exactly in 50.8% of cases.
+
+---
+
 ## Module map
 
 | file | role |
@@ -167,6 +227,11 @@ the methods actually differ), `owners.png`, `progress_profiles.png`.
 | `src/guidance_stage2/source_methods.py` | M0 drop / M1 project / M2 local bridging, progress inheritance |
 | `src/guidance_stage2/fields.py`, `metrics.py` | fields from legal sources, all indicators |
 | `src/guidance_stage2/visualization.py`, `pipeline.py`, `acceptance.py` | figures, orchestration, audit |
+| `src/guidance_stage2/propagation.py` | three interchangeable propagators (heap / numpy synchronous / bucket) + `auto` |
+| `src/guidance_stage3/search.py` | A* baseline, the B1–B5 priority policies, generic best-first loop, Dijkstra for L* |
+| `src/guidance_stage3/normalize.py` | `F_hat` (shared clip table) and `d_hat` normalisation |
+| `src/guidance_stage3/pipeline.py` | timed field rebuild + all 18 configurations per (map, grade) |
+| `src/guidance_stage3/visualization.py`, `metrics.py`, `acceptance.py` | expansion overlays, summaries, audit |
 
 ## Design decisions worth knowing
 
@@ -196,9 +261,12 @@ the methods actually differ), `owners.png`, `progress_profiles.png`.
 5. Pixel content of figures is not machine-checked; acceptance verifies the underlying
    data and that the files exist.
 
-## Next stage (Stage 2B, not implemented)
+## What is still open
 
-Feed the fields into A* / Focal Search and measure success rate, node expansions, time and
-final path length against the plain geometric heuristic, for standard A*, focal search
-without a guidance field, and the M0 / M1 / M2 fields. Nothing here claims the field makes
-search faster — the stage-1/2A evidence is about the field's structure, not its utility.
+- **Amortise the field.** Every end-to-end loss comes from building the field per query;
+  caching or precomputing it is the obvious next experiment.
+- **Scale.** 64x64 only. Whether the expansion advantage survives larger maps (where A*'s
+  heuristic is relatively worse) is untested.
+- **Adaptive fusion (B5)** was run with one fixed parameter set only; it did not beat the
+  best fixed alpha and should not enter a main experiment until tuned.
+- **No diagonal motion, no focal search, no learned prior** — all deliberately out of scope.
